@@ -1,6 +1,7 @@
 # Meson
 subprojects/*
 !subprojects/*.wrap
+!subprojects/packagefiles
 build/
 
 # Python

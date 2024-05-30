@@ -1,31 +1,32 @@
-project('pyodbc_numpy', 'cpp')
+project('npyodbc', 'cpp', version : '0.1.0')
 
-python = import('python').find_installation(pure: false)
-python_dependency = python.dependency()
+python = import('python').find_installation()
+python_dep = python.dependency()
 
+# ODBC driver needs to be installed by the OS.
 compiler = meson.get_compiler('cpp')
-odbc_dependeny = compiler.find_library('odbc', required: false)
+odbc_dep = compiler.find_library('odbc')
 
-numpy_include_directory = run_command(
+numpy_inc = run_command(
   python,
-  [
-    '-c',
-    'import os, numpy; print(os.path.relpath(numpy.get_include()))'
-  ],
-  check: true,
+  ['-c', 'import os, numpy; print(os.path.relpath(numpy.get_include()))'],
+  check : true,
 ).stdout().strip()
-numpy_dependency = declare_dependency(include_directories: numpy_include_directory)
+numpy_dep = declare_dependency(include_directories : numpy_inc)
 
-pyodbc_dependency = dependency('pyodbc', fallback: ['pyodbc', 'pyodbc_dep'])
+pyodbc = subproject('pyodbc')
+pyodbc_inc = pyodbc.get_variable('pyodbc_inc')
+
+npyodbc_inc = include_directories('include')
 
 python.extension_module(
-  'pyodbc_numpy',
-  ['src/pyodbc_numpy/pyodbc_numpy.cpp'],
-  dependencies: [
-      python_dependency,
-      odbc_dependeny,
-      numpy_dependency,
-      pyodbc_dependency,
+  'npyodbc',
+  ['src/npyodbcmodule.cpp'],
+  dependencies : [
+      python_dep,
+      odbc_dep,
+      numpy_dep,
   ],
-  install: true,
+  include_directories : [npyodbc_inc, pyodbc_inc],
+  install : true,
 )

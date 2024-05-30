@@ -3,6 +3,7 @@ directory = pyodbc
 url = https://github.com/mkleehammer/pyodbc.git
 revision = 5.1.0
 depth = 1
+patch_directory = pyodbc
 
 [provide]
 pyodbc = pyodbc_dep

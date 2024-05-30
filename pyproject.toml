@@ -5,7 +5,9 @@ requires = ["meson-python", "numpy <2"]
 [project]
 authors = [{name = "Quansight", email = "connect@quansight.com"}]
 classifiers = []
-dependencies = []
+dependencies = [
+    "numpy <2",
+]
 description = "pyodbc extended to use NumPy"
 keywords = []
 license = {file = "LICENSE"}
