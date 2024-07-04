@@ -14,3 +14,11 @@ compile_commands.json
 
 # Tests
 .coverage
+
+# Documentation
+node_modules/
+.docusaurus
+.cache-loader
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

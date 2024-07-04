@@ -6,7 +6,9 @@
 
 The development installations below includes Microsoft SQL Server 2022. The password for
 the server can be found in the Dockerfile and is `StrongPassword2022!`, which is not
-secure.
+secure. It is automatically installed when if you use the `devcontainer` in VSCode, or
+if you build the Docker container. See the [Getting Started intro]() in the
+documentation for more information on how to set up the server for testing purposes.
 
 ### Dev install using VSCode
 
