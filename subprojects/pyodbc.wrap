@@ -4,6 +4,7 @@ url = https://github.com/mkleehammer/pyodbc.git
 revision = 5.1.0
 depth = 1
 patch_directory = pyodbc
+diff_files = patches/textenc.patch, patches/pyproject.patch, patches/cursor.patch, patches/pyodbcmodule.patch
 
 [provide]
-pyodbc = pyodbc_dep
+dependency_names = pyodbc

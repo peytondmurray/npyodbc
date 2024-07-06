@@ -22,31 +22,11 @@ pyodbc_sources = [
   'src/textenc.cpp',
 ]
 pyodbc_inc = include_directories('src')
-# pyodbc_headers = [
-#   'src/cnxninfo.h',
-#   'src/connection.h',
-#   'src/cursor.h',
-#   'src/dbspecific.h',
-#   'src/decimal.h',
-#   'src/errors.h',
-#   'src/getdata.h',
-#   'src/params.h',
-#   'src/pyodbc.h',
-#   'src/pyodbcmodule.h',
-#   'src/resource.h',
-#   'src/row.h',
-#   'src/textenc.h',
-#   'src/wrapper.h',
-# ]
 
-# pyodbc_dep = declare_dependency(include_directories : include_directories('src'))
-
-python.extension_module(
-  'pyodbc',
-  pyodbc_sources,
-  dependencies : [
-    python_dependency,
-    odbc_dependency,
-  ],
-  install : false,
+pyodbc_dep = declare_dependency(
+  include_directories: pyodbc_inc,
+  sources: pyodbc_sources,
+  dependencies: [python_dependency, odbc_dependency],
 )
+
+meson.override_dependency('pyodbc', pyodbc_dep)

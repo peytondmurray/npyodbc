@@ -2,35 +2,27 @@
 #include <sql.h>
 #include <sqlext.h>
 
-#include "npcontainer.h"
+#include "methodobject.h"
+#include "pyodbc.h"
+#include "wrapper.h"
+#include "textenc.h"
+#include "connection.h"
 #include "pyodbcmodule.h"
 
-static PyObject *check_connection(PyObject *self) {
-    SQLHENV env;
-    SQLRETURN ret;
-
-    ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
-    if (ret == SQL_SUCCESS || ret == SQL_ROW_SUCCESS_WITH_INFO) {
-        return PyUnicode_FromString("env allocation worked");
-    } else {
-        return PyUnicode_FromString("env allocation failed");
-    }
-    SQLFreeHandle(SQL_HANDLE_ENV, env);
+// Set declaration for the pyodbc initialization function
+// defined in pyodbcmodule.h -> pyodbcmodule.cpp
+extern "C" {
+    PyMODINIT_FUNC PyInit_pyodbc();
 }
 
-static PyMethodDef methods[] = {
-        {"check_connection", (PyCFunction)check_connection, METH_NOARGS, NULL},
-        {NULL, NULL, 0, NULL},
-};
-
-static struct PyModuleDef moduledef = {
-        PyModuleDef_HEAD_INIT, "npyodbc", NULL, -1, methods, NULL, NULL, NULL, NULL,
-};
-
 PyMODINIT_FUNC PyInit_npyodbc(void) {
-    PyObject *module = PyModule_Create(&moduledef);
-    if (!module) {
+    // Initialize the pyodbc module, and just return that. Adding additional methods
+    // to the module can be done here.
+    PyObject *module = PyInit_pyodbc();
+    if (module == NULL) {
+        PyErr_SetString(PyExc_ImportError, "Error initializing pyodbc.");
         return NULL;
     }
+
     return module;
 }

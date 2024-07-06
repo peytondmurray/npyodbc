@@ -1,6 +1,8 @@
 #ifndef _NPCONTAINER_H_
 #define _NPCONTAINER_H_
 
+#include <Python.h>
+
 PyObject *Cursor_fetchdictarray(PyObject *self, PyObject *args, PyObject *kwargs);
 
 extern char fetchdictarray_doc[];

@@ -51,6 +51,7 @@ AllowShortEnumsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: true
 
+DerivePointerAlignment: false
 PointerAlignment: Right
 
 SpaceBeforeCtorInitializerColon: true

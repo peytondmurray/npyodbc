@@ -3,6 +3,9 @@ subprojects/*
 !subprojects/*.wrap
 !subprojects/packagefiles
 build/
+subprojects/packagefiles/patches/*.h
+subprojects/packagefiles/patches/*.cpp
+subprojects/packagefiles/patches/*.toml
 
 # Python
 __pycache__/
@@ -22,3 +25,10 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.yarn/
+.pnp.cjs
+.pnp.loader.mjs
+yarn.lock
+
+# Databases
+db.sqlite

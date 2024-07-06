@@ -8,14 +8,19 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 #include <stdio.h>
+#include <Python.h>
+#include <sqltypes.h>
+#include <vector>
+
 
 #include "numpy/arrayobject.h"
 #include "numpy/npy_math.h"
-#include "subprojects/pyodbc/src/connection.h"
-#include "subprojects/pyodbc/src/cursor.h"
-#include "subprojects/pyodbc/src/dbspecific.h"
-#include "subprojects/pyodbc/src/errors.h"
-#include "subprojects/pyodbc/src/pyodbc.h"
+#include "pyodbc.h"
+#include "connection.h"
+#include "cursor.h"
+#include "dbspecific.h"
+#include "errors.h"
+#include "pyodbcmodule.h"
 
 // exported variables ----------------------------------------------------------
 

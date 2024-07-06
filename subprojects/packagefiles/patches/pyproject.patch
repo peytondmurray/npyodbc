@@ -1,0 +1,28 @@
+--- pyodbc/pyproject.toml	2024-06-13 15:43:19.682449229 -0500
++++
+@@ -10,7 +10,7 @@
+ 
+ description = "DB API module for ODBC"
+ readme = "README.md"
+-license = {text = "MIT License"}
++license = {text = "MIT-0 License"}
+ 
+ authors = [{name = "Michael Kleehammer", email="michael@kleehammer.com"}]
+ 
+@@ -22,7 +22,7 @@
+ classifiers=['Development Status :: 5 - Production/Stable',
+              'Intended Audience :: Developers',
+              'Intended Audience :: System Administrators',
+-             'License :: OSI Approved :: MIT License',
++             'License :: OSI Approved :: MIT No Attribution License (MIT-0)',
+              'Operating System :: Microsoft :: Windows',
+              'Operating System :: POSIX',
+              'Programming Language :: Python',
+@@ -34,5 +34,5 @@
+ Homepage = "https://github.com/mkleehammer/pyodbc"
+ 
+ [build-system]
+-requires = ["setuptools"]
+-build-backend = "setuptools.build_meta"
++build-backend = "mesonpy"
++requires = ["meson-python", "numpy <2"]
