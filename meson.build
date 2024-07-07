@@ -1,4 +1,8 @@
-project('npyodbc', 'cpp', version : '0.1.0')
+project(
+  'npyodbc',
+  'cpp',
+  version: run_command(['python', '-m', 'setuptools_scm'], check: true).stdout().strip(),
+)
 
 python = import('python').find_installation(pure: false)
 python_dep = python.dependency()
@@ -23,30 +27,7 @@ npyodbc_sources = [
   'src/npyodbcmodule.cpp'
 ]
 
-python.install_sources(
-  [
-    'tests/__init__.py',
-    'tests/conftest.py',
-    'tests/mysql_test.py',
-    'tests/postgresql_test.py',
-    'tests/sqlserver_test.py',
-  ],
-  subdir: 'npyodbc/tests',
-)
-python.install_sources(
-  [
-    'tests/old/README.md',
-    'tests/old/accesstests.py',
-    'tests/old/empty.accdb',
-    'tests/old/empty.mdb',
-    'tests/old/exceltests.py',
-    'tests/old/informix_test.py',
-    'tests/old/sparktests.py',
-    'tests/old/sqldwtests.py',
-    'tests/old/sqlitetests.py',
-  ],
-  subdir: 'npyodbc/tests/old',
-)
+add_project_arguments('-DPYODBC_VERSION=' + meson.project_version(), language: 'cpp')
 
 # Build the npyodbc module
 python.extension_module(
@@ -60,5 +41,4 @@ python.extension_module(
   ],
   include_directories : [npyodbc_inc],
   install : true,
-  subdir: 'npyodbc',
 )

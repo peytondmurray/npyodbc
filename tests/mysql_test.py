@@ -221,10 +221,6 @@ def test_negative_row_index(cursor: npyodbc.Cursor):
     assert row[-1] == "1"
 
 
-def test_version():
-    assert 3 == len(npyodbc.version.split('.'))  # 1.3.1 etc.
-
-
 def test_date(cursor: npyodbc.Cursor):
     value = date(2001, 1, 1)
 

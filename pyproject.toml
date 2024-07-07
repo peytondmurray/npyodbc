@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "mesonpy"
-requires = ["meson-python", "numpy <2"]
+requires = ["meson-python", "numpy <2", "setuptools_scm"]
 
 [project]
 authors = [{name = "Quansight", email = "connect@quansight.com"}]
@@ -97,3 +97,6 @@ test = ["pytest", "pytest-cov"]
 
 [tool.isort]
 profile = "black"
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"

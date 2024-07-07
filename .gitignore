@@ -32,3 +32,7 @@ yarn.lock
 
 # Databases
 db.sqlite
+
+# gdb
+.gdbinit
+.gdb_history

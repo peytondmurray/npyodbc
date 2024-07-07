@@ -242,10 +242,6 @@ def test_close_cnxn(cursor: npyodbc.Cursor):
         cursor.execute("select * from t1")
 
 
-def test_version():
-    assert len(npyodbc.version.split('.')) == 3
-
-
 def test_rowcount(cursor: npyodbc.Cursor):
     assert cursor.rowcount == -1
     # The spec says it should be -1 when not in use.
