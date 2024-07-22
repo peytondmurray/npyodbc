@@ -100,3 +100,11 @@ profile = "black"
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
+markers = [
+    "sqlite: Tests that require a sqlite server to be running",
+    "postgres: Tests that require a PostgreSQL server to be running",
+    "mysql: Tests that require a MySQL server to be running",
+    "mssql_2017: Tests that require a Microsoft SQL Server 2017 to be running",
+    "mssql_2019: Tests that require a Microsoft SQL Server 2019 to be running",
+    "mssql_2022: Tests that require a Microsoft SQL Server 2022 to be running",
+]

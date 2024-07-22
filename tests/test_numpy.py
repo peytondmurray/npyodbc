@@ -54,11 +54,13 @@ def assert_result_close(a: np.ndarray, b: np.ndarray):
         assert_array_equal(a, b)
 
 
+@pytest.mark.sqlite()
 def test_cursor_fetchdictarray_method_exists():
     """Test that npyodbc.Cursor.fetchdictarray exists."""
     assert hasattr(npyodbc.Cursor, 'fetchdictarray')
 
 
+@pytest.mark.sqlite()
 @settings(deadline=500)
 @given(
     st.lists(
@@ -96,6 +98,7 @@ def test_fetchdictarray(cursor, values):
     cleanup(cursor)
 
 
+@pytest.mark.sqlite()
 @pytest.mark.skip(reason="FDA doesn't handle unicode currently")
 def test_fetchdictarray_unicode(cursor):
     """Test that fetchdictarray correctly handles unicode strings."""

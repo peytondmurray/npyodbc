@@ -1,54 +1,32 @@
-# If npyodbc has not been installed in this virtual environment, add the appropriate build
-# directory.  This allows us to compile and run pytest without an install step in between
-# slowing things down.  If you are going to use this, do not install npyodbc.  If you already
-# have, uninstall it.
-#
-# This is useful for me for very fast testing, but I realize some people may not like it, so
-# I'll only enable it if PYODBC_TESTLOCAL is set.
-
-import os, sys
-import importlib.machinery
-from datetime import datetime
-from os.path import join, dirname, abspath, getmtime
+import npyodbc
+import pytest
 
 
-def pytest_configure(config):
-    if os.environ.get('PYODBC_TESTLOCAL') != '1':
-        return
+def get_running_test_dbs():
+    connections = {
+        "sqlite": "Driver=SQLite3;Database=:memory:;Charset=UTF8",
+        "postgres": "DRIVER={PostgreSQL Unicode};SERVER=localhost;PORT=5432;UID=postgres_user;PWD=postgres_pwd;DATABASE=test",
+        "mysql": "DRIVER={MySQL ODBC 8.0 ANSI Driver};SERVER=localhost;UID=root;PWD=root;DATABASE=test;CHARSET=utf8mb4",
+        "mssql_2017": "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1401;UID=sa;PWD=StrongPassword2017;DATABASE=test;Encrypt=Optional",
+        "mssql_2019": "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1402;UID=sa;PWD=StrongPassword2019;DATABASE=test;Encrypt=Optional",
+        "mssql_2022": "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1403;UID=sa;PWD=StrongPassword2022;DATABASE=test;Encrypt=Optional",
+    }
+    for db, connection_str in connections.items():
+        try:
+            npyodbc.connect(connection_str)
+            print(f"{db} database service is running.")
+        except Exception as e:
+            connections[db] = None
+            print(f"{db} database service is not running; tests will be skipped.")
+            print(e)
+    return connections
 
-    try:
-        import npyodbc
-        return
-    except:
-        _add_to_path()
 
+DATABASES = get_running_test_dbs()
 
-def _add_to_path():
-    """
-    Prepends the build directory to the path so that newly built npyodbc libraries are
-    used, allowing it to be tested without pip-installing it.
-    """
-    # look for the suffixes used in the build filenames, e.g. ".cp38-win_amd64.pyd",
-    # ".cpython-38-darwin.so", ".cpython-38-x86_64-linux-gnu.so", etc.
-    library_exts = [ext for ext in importlib.machinery.EXTENSION_SUFFIXES if ext != '.pyd']
-    # generate the name of the npyodbc build file(s)
-    library_names = [f'npyodbc{ext}' for ext in library_exts]
-
-    # the build directory is assumed to be one directory up from this file
-    build_dir = join(dirname(dirname(abspath(__file__))), 'build')
-
-    # find all the relevant npyodbc build files, and get their modified dates
-    file_info = [
-        (getmtime(join(dirpath, file)), join(dirpath, file))
-        for dirpath, dirs, files in os.walk(build_dir)
-        for file in files
-        if file in library_names
-    ]
-    if file_info:
-        file_info.sort()  # put them in chronological order
-        library_modified_dt, library_path = file_info[-1]  # use the latest one
-        # add the build directory to the Python path
-        sys.path.insert(0, dirname(library_path))
-        print(f'Library: {library_path} (last modified {datetime.fromtimestamp(library_modified_dt)})')
-    else:
-        print('Did not find the npyodbc library in the build directory.  Will use the installed version.')
+def pytest_runtest_setup(item):
+    # Check all tests that have database markers to ensure the database is running
+    # as a service; skip if no connection can be made.
+    for marker in item.iter_markers():
+        if marker.name in DATABASES and DATABASES[marker.name] is None:
+            pytest.skip(f"{marker.name} database is not running.")

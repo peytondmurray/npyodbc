@@ -15,7 +15,6 @@ jobs:
         python-version: ["3.9", "3.10", "3.11"]
 
     services:
-
       mssql2017:
         image: mcr.microsoft.com/mssql/server:2017-latest
         ports:
@@ -43,7 +42,7 @@ jobs:
       postgres:
         image: postgres:11
         env:
-          POSTGRES_DB: postgres_db
+          POSTGRES_DB: test
           POSTGRES_USER: postgres_user
           POSTGRES_PASSWORD: postgres_pwd
         ports:
@@ -139,6 +138,7 @@ jobs:
       run: |
         echo "*** get version"
         psql -c "SELECT version()"
+        psql -c "DROP DATABASE IF EXISTS test"
         echo "*** create database"
         psql -c "CREATE DATABASE test WITH encoding='UTF8' LC_COLLATE='en_US.utf8' LC_CTYPE='en_US.utf8'"
         echo "*** list databases"
@@ -146,7 +146,7 @@ jobs:
       env:
         PGHOST: localhost
         PGPORT: 5432
-        PGDATABASE: postgres_db
+        PGDATABASE: postgres
         PGUSER: postgres_user
         PGPASSWORD: postgres_pwd
 
@@ -190,7 +190,7 @@ jobs:
 
     - name: Run SQL Server 2017 tests
       env:
-        PYODBC_SQLSERVER: "DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost,1401;UID=sa;PWD=StrongPassword2017;DATABASE=test"
+        PYODBC_SQLSERVER: "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1401;UID=sa;PWD=StrongPassword2017;DATABASE=test;Encrypt=Optional"
       run: |
         pytest -vv "./tests/sqlserver_test.py"
 
