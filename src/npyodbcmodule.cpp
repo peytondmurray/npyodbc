@@ -23,6 +23,7 @@ PyInit_npyodbc(void)
     // to the module can be done here.
     // PyObject *module = PyInit_pyodbc();
     PyInit_pyodbc();
+
     if (pModule == NULL) {
         PyErr_SetString(PyExc_ImportError, "Error initializing pyodbc.");
         return NULL;

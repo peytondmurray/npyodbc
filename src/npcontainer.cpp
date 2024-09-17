@@ -1424,20 +1424,22 @@ create_fill_dictarray(Cursor *cursor, npy_intp nrows, const char *null_suffix)
     return query_desc_to_dictarray(qd, null_suffix);
 }
 
-// -----------------------------------------------------------------------------
-// Method implementation
-// -----------------------------------------------------------------------------
-static char *Cursor_npfetch_kwnames[] = {
-        "size",          // keyword to read the maximum number of rows. Defaults to all.
-        "return_nulls",  // keyword to make a given fetch to add boolean columns for
-                         // nulls
-        "null_suffix",   // keyword providing the string to use as suffix
+static const char *Cursor_npfetch_kwnames[] = {
+    "size",          // keyword to read the maximum number of rows. Defaults to all.
+    "return_nulls",  // keyword to make a given fetch to add boolean columns for
+                     // nulls
+    "null_suffix",   // keyword providing the string to use as suffix
+    NULL
 };
 
-//
-// The main cursor.fetchdict() method
-//
-
+/**
+ * @brief Underlying fetchdictarray method which turns SQL query results into a dict of arrays.
+ *
+ * @param self Cursor which has been queried, and has results waiting to be read
+ * @param args Python arguments; see Cursor_npfetch_kwnames for valid arguments
+ * @param kwargs Python keyword arguments; see Cursor_npfetch_kwnames for valid arguments
+ * @return A dictionary containing {column name: np.ndarray} key value pairs
+ */
 PyObject *
 Cursor_fetchdictarray(PyObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -1447,33 +1449,36 @@ Cursor_fetchdictarray(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     Cursor *cursor = Cursor_Validate(self, CURSOR_REQUIRE_RESULTS | CURSOR_RAISE_ERROR);
     if (!cursor) {
-        return 0;
+        Py_DECREF(numpy);
+        return NULL;
     }
 
-    /*
-        note: ssize_t is used as a type for parse tuple as it looks like
-        the integer in ParseTuple that is more likely to have the same size
-        as a npy_intp
-    */
-    TRACE("\n\nParse tuple\n");
     Py_ssize_t nrows = -1;
-    PyObject *return_nulls = NULL;
+    bool return_nulls = false;
     const char *null_suffix = "_isnull";
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|nOs", Cursor_npfetch_kwnames, &nrows,
-                                     &return_nulls, &null_suffix)) {
-        return 0;
+    if (
+        !PyArg_ParseTupleAndKeywords(
+            args,
+            kwargs,
+            "|nps",
+            const_cast<char **>(Cursor_npfetch_kwnames),
+            &nrows,
+            &return_nulls,
+            &null_suffix
+        )
+    ) {
+        Py_DECREF(numpy);
+        return NULL;
     }
 
-    bool preserve_nulls = return_nulls ? PyObject_IsTrue(return_nulls) : false;
+    // Initialize numpy function pointer table so the C-API can be used
     import_array();
     if (PyArray_GetNDArrayCFeatureVersion() >= 7) {
         CAN_USE_DATETIME = true;
     }
 
-    PyObject *rv = create_fill_dictarray(cursor, nrows, preserve_nulls ? null_suffix : 0);
-
-    // Possible reference counting issue
-    return rv;
+    Py_DECREF(numpy);
+    return create_fill_dictarray(cursor, nrows, return_nulls ? null_suffix : 0);
 }
 
 char fetchdictarray_doc[] =
