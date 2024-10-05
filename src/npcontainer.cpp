@@ -31,39 +31,9 @@
 #include "pyodbcmodule.h"
 // clang-format on
 
-// exported variables ----------------------------------------------------------
-
 /* controls the maximum text field width, a negative value indicates that the
    text size limit will be dynamic based on the sql type, e.g. varchar (4000) */
 Py_ssize_t iopro_text_limit = -1;
-
-// -----------------------------------------------------------------------------
-
-bool pyodbc_tracing_enabled = false;
-
-void
-pyodbc_trace_func(const char *file, int line, const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-
-    if (0 != file) {
-        const char *rel_file = strstr(file, "dbadapter");
-        printf("%s:%d\n", rel_file, line);
-    }
-    vprintf(fmt, args);
-}
-
-#define TRACE_NOLOC(...)        \
-    if (pyodbc_tracing_enabled) \
-    pyodbc_trace_func(NULL, 0, __VA_ARGS__)
-
-#define GUARDED_ALLOC(...) malloc(__VA_ARGS__)
-#define GUARDED_DEALLOC(...) free(__VA_ARGS__)
-
-#define CHECK_ALLOC_GUARDS(...) \
-    {                           \
-    }
 
 namespace {
 inline size_t
@@ -97,73 +67,106 @@ static size_t DEFAULT_ROWS_TO_BE_ALLOCATED = DEFAULT_ROWS_TO_BE_FETCHED;
 // the module init function if running on Numpy >= API version 7.
 static bool CAN_USE_DATETIME = false;
 
+/**
+ * @brief Convert a SQL type to a string description of that type.
+ *
+ * @param type SQL type to convert
+ * @return String description of that type
+ */
 const char *
 sql_type_to_str(SQLSMALLINT type)
 {
-#define TYPENAME(x, y) \
-    case x:            \
-        return y;
     switch (type) {
-        TYPENAME(SQL_CHAR, "char");
-        TYPENAME(SQL_VARCHAR, "varchar");
-        TYPENAME(SQL_LONGVARCHAR, "longvarchar");
-        TYPENAME(SQL_WCHAR, "wchar");
-        TYPENAME(SQL_WVARCHAR, "wvarchar");
-        TYPENAME(SQL_WLONGVARCHAR, "wlongvarchar");
-
-        TYPENAME(SQL_DECIMAL, "decimal");
-        TYPENAME(SQL_NUMERIC, "numeric");
-        TYPENAME(SQL_SMALLINT, "smallint");
-        TYPENAME(SQL_INTEGER, "integer");
-        TYPENAME(SQL_REAL, "real");
-        TYPENAME(SQL_FLOAT, "float");
-        TYPENAME(SQL_DOUBLE, "double");
-        TYPENAME(SQL_BIT, "bit");
-        TYPENAME(SQL_TINYINT, "tiny");
-        TYPENAME(SQL_BIGINT, "bigint");
-
-        TYPENAME(SQL_BINARY, "binary");
-        TYPENAME(SQL_VARBINARY, "varbinary");
-        TYPENAME(SQL_LONGVARBINARY, "longvarbinary");
-
-        TYPENAME(SQL_TYPE_DATE, "date");
-        TYPENAME(SQL_TYPE_TIME, "time");
-        TYPENAME(SQL_TYPE_TIMESTAMP, "timestamp");
-
-        TYPENAME(SQL_GUID, "guid");
+        case SQL_CHAR:
+            return "char";
+        case SQL_VARCHAR:
+            return "varchar";
+        case SQL_LONGVARCHAR:
+            return "longvarchar";
+        case SQL_WCHAR:
+            return "wchar";
+        case SQL_WVARCHAR:
+            return "wvarchar";
+        case SQL_WLONGVARCHAR:
+            return "wlongvarchar";
+        case SQL_DECIMAL:
+            return "decimal";
+        case SQL_NUMERIC:
+            return "numeric";
+        case SQL_SMALLINT:
+            return "smallint";
+        case SQL_INTEGER:
+            return "integer";
+        case SQL_REAL:
+            return "real";
+        case SQL_FLOAT:
+            return "float";
+        case SQL_DOUBLE:
+            return "double";
+        case SQL_BIT:
+            return "bit";
+        case SQL_TINYINT:
+            return "tiny";
+        case SQL_BIGINT:
+            return "bigint";
+        case SQL_BINARY:
+            return "binary";
+        case SQL_VARBINARY:
+            return "varbinary";
+        case SQL_LONGVARBINARY:
+            return "longvarbinary";
+        case SQL_TYPE_DATE:
+            return "date";
+        case SQL_TYPE_TIME:
+            return "time";
+        case SQL_TYPE_TIMESTAMP:
+            return "timestamp";
+        case SQL_GUID:
+            return "guid";
         default:
             return "UNKNOWN";
     }
-#undef TYPENAME
 }
 
+/**
+ * @brief Convert a SQL C type to a string description of that type.
+ *
+ * @param type SQL C type to convert
+ * @return String description of that type
+ */
 const char *
 sql_c_type_to_str(SQLSMALLINT type)
 {
-#define TYPENAME(x, y) \
-    case x:            \
-        return y;
     switch (type) {
-        TYPENAME(SQL_C_BIT, "bit");
-        TYPENAME(SQL_C_CHAR, "char");
-        TYPENAME(SQL_C_WCHAR, "wchar");
-
-        TYPENAME(SQL_C_TINYINT, "tinyint");
-        TYPENAME(SQL_C_SSHORT, "sshort");
-        TYPENAME(SQL_C_SLONG, "slong");
-        TYPENAME(SQL_C_SBIGINT, "sbigint");
-        TYPENAME(SQL_C_FLOAT, "float");
-        TYPENAME(SQL_C_DOUBLE, "double");
-
-        TYPENAME(SQL_C_BINARY, "binary");
-
-        TYPENAME(SQL_C_TYPE_DATE, "date struct");
-        TYPENAME(SQL_C_TIMESTAMP, "timestamp struct");
-        TYPENAME(SQL_C_TIME, "time struct");
+        case SQL_C_BIT:
+            return "bit";
+        case SQL_C_CHAR:
+            return "char";
+        case SQL_C_WCHAR:
+            return "wchar";
+        case SQL_C_TINYINT:
+            return "tinyint";
+        case SQL_C_SSHORT:
+            return "sshort";
+        case SQL_C_SLONG:
+            return "slong";
+        case SQL_C_SBIGINT:
+            return "sbigint";
+        case SQL_C_FLOAT:
+            return "float";
+        case SQL_C_DOUBLE:
+            return "double";
+        case SQL_C_BINARY:
+            return "binary";
+        case SQL_C_TYPE_DATE:
+            return "date struct";
+        case SQL_C_TIMESTAMP:
+            return "timestamp struct";
+        case SQL_C_TIME:
+            return "time struct";
         default:
             return "UNKNOWN";
     }
-#undef TYPENAME
 }
 
 using namespace std;
@@ -449,7 +452,8 @@ convert_buffer(PyArrayObject *dst_array, void *src, int sql_c_type, SQLLEN offse
         } break;
 
         default:
-            TRACE_NOLOC("WARN: unexpected conversion in fill_dictarray.\n");
+            PyErr_WarnEx(PyExc_RuntimeWarning, "Unexpected conversion in fill_dictarray.", 1);
+            break;
     }
 }
 
@@ -571,11 +575,11 @@ column_desc::column_desc()
 column_desc::~column_desc()
 {
     if (null_buffer_) {
-        GUARDED_DEALLOC(null_buffer_);
+        free(null_buffer_);
     }
 
     if (scratch_buffer_) {
-        GUARDED_DEALLOC(scratch_buffer_);
+        free(scratch_buffer_);
     }
 
     Py_XDECREF(npy_array_nulls_);
@@ -632,14 +636,6 @@ int
 map_column_desc_types(column_desc &cd, bool unicode)
 {
     PyArray_Descr *dtype = 0;
-
-#define MAP_SUCCESS(DTYPE, CTYPE)   \
-    do {                            \
-        cd.npy_type_descr_ = DTYPE; \
-        cd.sql_c_type_ = CTYPE;     \
-        return 0;                   \
-    } while (0)
-
     size_t sql_size = cd.sql_size_;
 
     switch (cd.sql_type_) {
@@ -653,7 +649,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
                 dtype = string_dtype(limit_text_size(sql_size));
                 if (dtype) {
                     cd.element_buffer_size_ = dtype->elsize;
-                    MAP_SUCCESS(dtype, SQL_C_CHAR);
+                    cd.npy_type_descr_ = dtype;
+                    cd.sql_c_type_ = SQL_C_CHAR;
+                    return 0;
                 }
                 break;
             }
@@ -665,7 +663,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
             dtype = unicode_dtype(limit_text_size(sql_size));
             if (dtype) {
                 cd.element_buffer_size_ = dtype->elsize;
-                MAP_SUCCESS(dtype, SQL_C_WCHAR);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_WCHAR;
+                return 0;
             }
         } break;
 
@@ -673,7 +673,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
         case SQL_REAL:
             dtype = PyArray_DescrFromType(NPY_FLOAT);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_FLOAT);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_FLOAT;
+                return 0;
             }
             break;
 
@@ -681,7 +683,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
         case SQL_DOUBLE:
             dtype = PyArray_DescrFromType(NPY_DOUBLE);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_DOUBLE);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_DOUBLE;
+                return 0;
             }
             break;
 
@@ -689,35 +693,45 @@ map_column_desc_types(column_desc &cd, bool unicode)
         case SQL_BIT:
             dtype = PyArray_DescrFromType(NPY_BOOL);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_BIT);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_BIT;
+                return 0;
             }
             break;
 
         case SQL_TINYINT:
             dtype = PyArray_DescrFromType(NPY_UINT8);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_TINYINT);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_TINYINT;
+                return 0;
             }
             break;
 
         case SQL_SMALLINT:
             dtype = PyArray_DescrFromType(NPY_INT16);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_SSHORT);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_SSHORT;
+                return 0;
             }
             break;
 
         case SQL_INTEGER:
             dtype = PyArray_DescrFromType(NPY_INT32);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_SLONG);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_SLONG;
+                return 0;
             }
             break;
 
         case SQL_BIGINT:
             dtype = PyArray_DescrFromType(NPY_INT64);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_SBIGINT);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_SBIGINT;
+                return 0;
             }
             break;
 
@@ -726,7 +740,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
             if (CAN_USE_DATETIME) {
                 dtype = dtype_from_string("M8[D]");
                 if (dtype) {
-                    MAP_SUCCESS(dtype, SQL_C_TYPE_DATE);
+                    cd.npy_type_descr_ = dtype;
+                    cd.sql_c_type_ = SQL_C_TYPE_DATE;
+                    return 0;
                 }
             }
             break;
@@ -736,7 +752,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
             if (CAN_USE_DATETIME) {
                 dtype = dtype_from_string("m8[s]");
                 if (dtype) {
-                    MAP_SUCCESS(dtype, SQL_C_TYPE_TIME);
+                    cd.npy_type_descr_ = dtype;
+                    cd.sql_c_type_ = SQL_C_TYPE_TIME;
+                    return 0;
                 }
             }
             break;
@@ -745,7 +763,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
             if (CAN_USE_DATETIME) {
                 dtype = dtype_from_string("M8[us]");
                 if (dtype) {
-                    MAP_SUCCESS(dtype, SQL_C_TYPE_TIMESTAMP);
+                    cd.npy_type_descr_ = dtype;
+                    cd.sql_c_type_ = SQL_C_TYPE_TIMESTAMP;
+                    return 0;
                 }
             }
             break;
@@ -757,7 +777,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
         case SQL_NUMERIC:
             dtype = PyArray_DescrFromType(NPY_DOUBLE);
             if (dtype) {
-                MAP_SUCCESS(dtype, SQL_C_DOUBLE);
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_DOUBLE;
+                return 0;
             }
             break;
 
@@ -768,13 +790,6 @@ map_column_desc_types(column_desc &cd, bool unicode)
         default:
             break;
     }
-#undef MAP_SUCCESS
-
-    TRACE_NOLOC(
-            "WARN: Failed translation of SQL\n\ttype: %s(%d)\n\tsize: "
-            "%d\n\tuse_unicode: %s\n",
-            sql_type_to_str(cd.sql_type_), (int)cd.sql_type_, (int)cd.sql_size_,
-            unicode ? "Yes" : "No");
 
     return 1;
 }
@@ -792,8 +807,6 @@ struct query_desc {
     int allocate_buffers(size_t initial_result_count, size_t chunk_size, bool keep_nulls);
     int resize(size_t new_count);
     void cleanup();
-
-    void dump_column_mapping() const;
 
     query_desc() : allocated_results_count_(0), chunk_size_(0), offset_(0) {}
 
@@ -847,7 +860,6 @@ query_desc::bind_cols()
 {
     SQLUSMALLINT col_number = 1;
 
-    TRACE_NOLOC("\nBinding columns:\n");
     for (std::vector<column_desc>::iterator it = columns_.begin(); it < columns_.end(); ++it) {
         void *bind_ptr;
         if (it->scratch_buffer_) {
@@ -859,8 +871,6 @@ query_desc::bind_cols()
                                            (this->offset_ * PyArray_ITEMSIZE(array)));
         }
 
-        TRACE_NOLOC("\tcolumn:%-10.10s address:%p %s\n", it->sql_name_, bind_ptr,
-                    bind_ptr == it->scratch_buffer_ ? "(scratch)" : "");
         SQLRETURN status = SQLBindCol(hstmt_, col_number, it->sql_c_type_, bind_ptr,
                                       it->element_buffer_size_, it->null_buffer_);
         if (!SQL_SUCCEEDED(status)) {
@@ -913,7 +923,6 @@ query_desc::allocate_buffers(size_t buffer_element_count, size_t chunk_element_c
     int alloc_errors = 0;
     npy_intp npy_array_count = static_cast<npy_intp>(buffer_element_count);
 
-    TRACE_NOLOC("\nAllocating arrays for column data:\n");
     for (std::vector<column_desc>::iterator it = columns_.begin(); it < columns_.end(); ++it) {
         // Allocate the numpy buffer for the result
         PyObject *arr = PyArray_SimpleNewFromDescr(1, &npy_array_count, it->npy_type_descr_);
@@ -935,7 +944,6 @@ query_desc::allocate_buffers(size_t buffer_element_count, size_t chunk_element_c
             alloc_errors++;
         }
 
-        TRACE_NOLOC("\tcolumn: %-10.10s address: %p\n", it->sql_name_, PyArray_DATA(array));
         // SimpleNewFromDescr steals the reference for the dtype
         Py_INCREF(it->npy_type_descr_);
         // if it is a type that needs to perform conversion,
@@ -946,21 +954,21 @@ query_desc::allocate_buffers(size_t buffer_element_count, size_t chunk_element_c
         // conversion simpler.
         switch (it->sql_c_type_) {
             case SQL_C_TYPE_DATE: {
-                void *mem = GUARDED_ALLOC(chunk_element_count * sizeof(DATE_STRUCT));
+                void *mem = malloc(chunk_element_count * sizeof(DATE_STRUCT));
                 it->scratch_buffer_ = mem;
                 if (!mem) {
                     alloc_errors++;
                 }
             } break;
             case SQL_C_TYPE_TIMESTAMP: {
-                void *mem = GUARDED_ALLOC(chunk_element_count * sizeof(TIMESTAMP_STRUCT));
+                void *mem = malloc(chunk_element_count * sizeof(TIMESTAMP_STRUCT));
                 it->scratch_buffer_ = mem;
                 if (!mem) {
                     alloc_errors++;
                 }
             } break;
             case SQL_C_TYPE_TIME: {
-                void *mem = GUARDED_ALLOC(chunk_element_count * sizeof(TIME_STRUCT));
+                void *mem = malloc(chunk_element_count * sizeof(TIME_STRUCT));
                 it->scratch_buffer_ = mem;
                 if (!mem) {
                     alloc_errors++;
@@ -989,18 +997,13 @@ query_desc::allocate_buffers(size_t buffer_element_count, size_t chunk_element_c
                 // In order to check if no translation is needed, the
                 // size of SQLWCHAR is used.
                 if (sizeof(SQLWCHAR) == 2) {
-                    TRACE_NOLOC(
-                            "\tscratch memory for unicode conversion (sizeof(SQLWCHAR) "
-                            "is %d)\n",
-                            (int)sizeof(SQLWCHAR));
-
                     size_t item_count = PyArray_ITEMSIZE(it->npy_array_) / sizeof(npy_ucs4);
                     // 2 due to possibility of surrogate.
                     // doing the math, the final buffer could be used instead of a
                     // scratch buffer, but would require code that can do the conversion
                     // in-place.
                     void *mem =
-                            GUARDED_ALLOC(chunk_element_count * item_count * sizeof(SQLWCHAR) * 2);
+                            malloc(chunk_element_count * item_count * sizeof(SQLWCHAR) * 2);
                     it->scratch_buffer_ = mem;
                     if (!mem) {
                         alloc_errors++;
@@ -1014,7 +1017,7 @@ query_desc::allocate_buffers(size_t buffer_element_count, size_t chunk_element_c
         if (it->sql_nullable_) {
             // if the type is nullable, allocate a buffer for null
             // data (ODBC buffer, that has SQLLEN size)
-            void *mem = GUARDED_ALLOC(chunk_element_count * sizeof(SQLLEN));
+            void *mem = malloc(chunk_element_count * sizeof(SQLLEN));
             it->null_buffer_ = static_cast<SQLLEN *>(mem);
             if (!mem) {
                 alloc_errors++;
@@ -1049,11 +1052,8 @@ query_desc::resize(size_t new_size)
     int alloc_fail = 0;
     npy_intp size = static_cast<npy_intp>(new_size);
     for (std::vector<column_desc>::iterator it = columns_.begin(); it < columns_.end(); ++it) {
-        void *old_data = PyArray_DATA(it->npy_array_);
         int failed = resize_array(it->npy_array_, size);
-        void *new_data = PyArray_DATA(it->npy_array_);
 
-        TRACE_NOLOC("Array for column %s moved. %p -> %p", it->sql_name_, old_data, new_data);
         // if it has an array for nulls, resize it as well
         if (it->npy_array_nulls_) {
             failed += resize_array(it->npy_array_nulls_, size);
@@ -1105,12 +1105,10 @@ query_desc::convert(size_t count)
         //       Probably nulls could be handled by that conversion
         //       function as well.
         if (it->scratch_buffer_) {  // a conversion is needed
-            CHECK_ALLOC_GUARDS(it->scratch_buffer_, "scratch buffer for field %s\n", it->sql_name_);
             convert_buffer(it->npy_array_, it->scratch_buffer_, it->sql_c_type_, offset_, count);
         }
 
         if (it->null_buffer_) {  // nulls are present
-            CHECK_ALLOC_GUARDS(it->null_buffer_, "null buffer for field %s\n", it->sql_name_);
             fill_NAarray(it->npy_array_, it->npy_array_nulls_, it->null_buffer_, offset_, count);
         }
     }
@@ -1132,20 +1130,6 @@ query_desc::cleanup()
     columns_.swap(tmp);
 }
 
-void
-query_desc::dump_column_mapping() const
-{
-    const char *fmt_str_head = "%-20.20s %-15.15s %-10.10s %-8.8s %-20.20s\n";
-    const char *fmt_str = "%-20.20s %-15.15s %-10u %-8.8s %-20.20s\n";
-    const char *dashes = "----------------------------------------";
-    TRACE_NOLOC(fmt_str_head, "name", "sql type", "size", "null?", "c type");
-    TRACE_NOLOC(fmt_str_head, dashes, dashes, dashes, dashes, dashes);
-    for (std::vector<column_desc>::const_iterator it = columns_.begin(); it < columns_.end();
-         ++it) {
-        TRACE_NOLOC(fmt_str, it->sql_name_, sql_type_to_str(it->sql_type_), it->sql_size_,
-                    it->sql_nullable_ ? "null" : "not null", sql_c_type_to_str(it->sql_c_type_));
-    }
-}
 }  // namespace
 
 size_t
@@ -1177,7 +1161,7 @@ raise_unsupported_types_exception(int err_count, query_desc &qd)
 
     if (count >= sizeof(error)) {
         // did not fit, truncated
-        char *error_alloc = (char *)GUARDED_ALLOC(count);
+        char *error_alloc = (char *)malloc(count);
         if (error_alloc) {
             use_string = error_alloc;
             print_error_types(qd, count, error_alloc, count);
@@ -1188,7 +1172,7 @@ raise_unsupported_types_exception(int err_count, query_desc &qd)
 
     if (use_string != error) {
         // we had to allocate
-        GUARDED_DEALLOC(use_string);
+        free(use_string);
     }
     return 0;
 }
@@ -1271,10 +1255,6 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
         return 0 == raise_unsupported_types_exception(unsupported_fields, result);
     }
 
-    if (pyodbc_tracing_enabled) {
-        result.dump_column_mapping();
-    }
-
     int allocation_errors = result.allocate_buffers(outsize, chunk_size, want_nulls);
     if (allocation_errors) {
         return 0 == RaiseErrorV(0, PyExc_MemoryError, "Can't allocate result buffers", outsize);
@@ -1282,7 +1262,6 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
 
     fetch_status status(cur->hstmt, result.chunk_size_);
     do {
-        TRACE_NOLOC("Fetching %d rows..\n", result.chunk_size_);
         int error = result.ensure();
         if (error) {
             return 0 == RaiseErrorV(0, PyExc_MemoryError, "Can't allocate result buffers");
@@ -1311,8 +1290,6 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
         // driver returns an error here, but it should not!  I'm not
         // sure that this solution is the correct one, but anyway.
         if ((rc == SQL_NO_DATA) || (rc == -1)) {  // XXX
-                                                  // if (rc == SQL_NO_DATA) {
-            TRACE_NOLOC("No more data available (%d)\n", (int)rc);
             break;
         }
         else if (rc < 0) {
@@ -1324,16 +1301,11 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
         // NumRowsFetched seems arbitrary (i.e. not set).  Probably
         // reveals a problem in the ODBC driver.
         if (status.rows_read_ > static_cast<SQLLEN>(result.chunk_size_)) {
-            // Let's reset its value to 0 instead (the most probable value here)
-            TRACE_NOLOC(
-                    "WARN: rows read reported is greater than requested (Read: %d, "
-                    "Requested: %d)\n",
-                    static_cast<int>(status.rows_read_), static_cast<int>(result.chunk_size_));
-
+            // The rows read reported is greater than requested. Let's reset its
+            // value to 0 instead (the most probable value here)
             status.rows_read_ = 0;
         }
 
-        TRACE_NOLOC("\nConverting %d row(s)\n", status.rows_read_);
         result.convert(status.rows_read_);
         result.advance(status.rows_read_);
 
@@ -1353,7 +1325,6 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
         if (alloc_failures) {
             // note that this shouldn't be happening, as a shrinking realloc
             // should always succeed!
-            TRACE_NOLOC("WARN: Unexpected failure when trying to shrink arrays");
             return 0 == RaiseErrorV(0, PyExc_MemoryError, "Can't allocate result buffers");
         }
     }
