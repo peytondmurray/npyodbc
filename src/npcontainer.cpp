@@ -13,6 +13,7 @@
 #include <Python.h>
 #include <sqltypes.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <vector>
 
@@ -30,6 +31,17 @@
 #include "errors.h"
 #include "pyodbcmodule.h"
 // clang-format on
+
+#include "npcontainer.h"
+
+// Numpy 2.0 compatibility
+#if NPY_ABI_VERSION < 0x02000000
+  static inline void
+    PyDataType_SET_ELSIZE(PyArray_Descr *dtype, npy_intp size)
+    {
+        dtype->elsize = size;
+    }
+#endif
 
 /* controls the maximum text field width, a negative value indicates that the
    text size limit will be dynamic based on the sql type, e.g. varchar (4000) */
@@ -74,8 +86,7 @@ static bool CAN_USE_DATETIME = false;
  * @return String description of that type
  */
 const char *
-sql_type_to_str(SQLSMALLINT type)
-{
+sql_type_to_str(SQLSMALLINT type) {
     switch (type) {
         case SQL_CHAR:
             return "char";
@@ -135,8 +146,7 @@ sql_type_to_str(SQLSMALLINT type)
  * @return String description of that type
  */
 const char *
-sql_c_type_to_str(SQLSMALLINT type)
-{
+sql_c_type_to_str(SQLSMALLINT type) {
     switch (type) {
         case SQL_C_BIT:
             return "bit";
@@ -303,21 +313,15 @@ convert_timestruct_to_timedelta(const TIME_STRUCT *dts)
 //
 // The only cases that need to be supported are the ones that can
 // actually be generated from SQL types
-static void
+int
 fill_NAvalue(void *value, PyArray_Descr *dtype)
 {
-    int nptype = dtype->type_num;
-    int elsize = dtype->elsize;
-    switch (nptype) {
+    switch (dtype->type_num) {
         case NPY_BOOL:
             ((npy_bool *)value)[0] = 0;  // XXX False is a good default?
             break;
         case NPY_INT8:
             ((npy_int8 *)value)[0] = NPY_MIN_INT8;
-            break;
-        case NPY_UINT8:
-            // For uint8 use max, as 0 is more likely to be valid data.
-            ((npy_uint8 *)value)[0] = NPY_MAX_UINT8;
             break;
         case NPY_INT16:
             ((npy_int16 *)value)[0] = NPY_MIN_INT16;
@@ -328,15 +332,37 @@ fill_NAvalue(void *value, PyArray_Descr *dtype)
         case NPY_INT64:
             ((npy_int64 *)value)[0] = NPY_MIN_INT64;
             break;
-        case NPY_FLOAT:
-            ((npy_float *)value)[0] = NPY_NANF;
+        case NPY_UINT8:
+            // For uint use max, as 0 is more likely to be valid data.
+            ((npy_uint8 *)value)[0] = NPY_MAX_UINT8;
             break;
-        case NPY_DOUBLE:
-            ((npy_double *)value)[0] = NPY_NAN;
+        case NPY_UINT16:
+            // For uint use max, as 0 is more likely to be valid data.
+            ((npy_uint16 *)value)[0] = NPY_MAX_UINT16;
+            break;
+        case NPY_UINT32:
+            // For uint use max, as 0 is more likely to be valid data.
+            ((npy_uint32 *)value)[0] = NPY_MAX_UINT32;
+            break;
+        case NPY_UINT64:
+            // For uint use max, as 0 is more likely to be valid data.
+            ((npy_uint64 *)value)[0] = NPY_MAX_UINT64;
+            break;
+        case NPY_FLOAT16:
+            ((npy_float16 *)value)[0] = NPY_NANF;
+            break;
+        case NPY_FLOAT32:
+            ((npy_float32 *)value)[0] = NPY_NANF;
+            break;
+        case NPY_FLOAT64:
+            ((npy_float64 *)value)[0] = NPY_NANL;
+            break;
+        case NPY_FLOAT128:
+            ((npy_float128 *)value)[0] = NPY_NANL;
             break;
         case NPY_STRING:
         case NPY_UNICODE:
-            memset(value, 0, static_cast<size_t>(elsize));
+            memset(value, 0, static_cast<size_t>(dtype->elsize));
             break;
         case NPY_DATETIME:
             ((npy_int64 *)value)[0] = NPY_DATETIME_NAT;
@@ -344,19 +370,55 @@ fill_NAvalue(void *value, PyArray_Descr *dtype)
         case NPY_TIMEDELTA:
             ((npy_int64 *)value)[0] = NPY_DATETIME_NAT;
             break;
+        case NPY_COMPLEX64:
+        case NPY_COMPLEX128:
+        case NPY_COMPLEX256:
+        case NPY_OBJECT:
         default:
-            RaiseErrorV(0, PyExc_TypeError, "NumPy data type %d is not supported.", nptype);
+            PyObject *typestr = PyObject_Str((PyObject *)dtype->typeobj);
+
+            if (typestr == NULL) {
+                PyErr_Format(
+                    PyExc_TypeError,
+                    "Numpy data type doesn't support null values, but nulls were returned from the database. Unable to print string representation of dtype with type_num = %d",
+                    dtype->type_num
+                );
+                return -1;
+            }
+
+            const char *str = PyUnicode_AsUTF8(typestr);
+            Py_DECREF(typestr);
+
+            if (str == NULL) {
+                PyErr_Format(
+                    PyExc_TypeError,
+                    "Numpy data type doesn't support null values, but nulls were returned from the database. Unable to print string representation of dtype with type_num = %d",
+                    dtype->type_num
+                );
+                return -1;
+            }
+
+            PyErr_Format(
+                PyExc_TypeError,
+                "Numpy data type %s doesn't support null values, but nulls were returned from the database.",
+                str
+            );
+            return -1;
     }
+    return 0;
 }
 
 static int
-fill_NAarray(PyArrayObject *array, PyArrayObject *array_nulls, SQLLEN *nulls, size_t offset,
-             size_t nrows)
-{
+fill_NAarray(
+    PyArrayObject *array,
+    PyArrayObject *array_nulls,
+    SQLLEN *nulls,
+    size_t offset,
+    size_t nrows
+) {
     // Fill array with NA info in nullarray coming from ODBC
     npy_intp elsize_array = PyArray_ITEMSIZE(array);
     char *data_array = PyArray_BYTES(array);
-    SQLLEN *data_null = nulls;
 
     // Only the last nrows have to be updated
     data_array += offset * elsize_array;
@@ -368,9 +430,11 @@ fill_NAarray(PyArrayObject *array, PyArrayObject *array_nulls, SQLLEN *nulls, si
         data_array_nulls += offset * elsize_array_nulls;
 
         for (size_t i = 0; i < nrows; ++i) {
-            if (data_null[i] == SQL_NULL_DATA) {
+            if (nulls[i] == SQL_NULL_DATA) {
                 *data_array_nulls = NPY_TRUE;
-                fill_NAvalue(data_array, PyArray_DESCR(array));
+                if (fill_NAvalue(data_array, PyArray_DESCR(array)) < 0) {
+                    return -1;
+                }
             }
             else {
                 *data_array_nulls = NPY_FALSE;
@@ -382,8 +446,10 @@ fill_NAarray(PyArrayObject *array, PyArrayObject *array_nulls, SQLLEN *nulls, si
     else {
         for (size_t i = 0; i < nrows; ++i) {
             // If NULL are detected, don't show data in array
-            if (data_null[i] == SQL_NULL_DATA) {
-                fill_NAvalue(data_array, PyArray_DESCR(array));
+            if (nulls[i] == SQL_NULL_DATA) {
+                if (fill_NAvalue(data_array, PyArray_DESCR(array)) < 0){
+                    return -1;
+                }
             }
             data_array += elsize_array;
         }
@@ -436,10 +502,8 @@ convert_buffer(PyArrayObject *dst_array, void *src, int sql_c_type, SQLLEN offse
                 size_t bufsize = len * sizeof(SQLWCHAR);
 
                 // Create a UnicodeString to convert from the UTF16 stored in the database
-                icu::UnicodeString unicode = icu::UnicodeString(
-                    reinterpret_cast<const char16_t *>(src),
-                    bufsize
-                );
+                icu::UnicodeString unicode =
+                        icu::UnicodeString(reinterpret_cast<const char16_t *>(src), bufsize);
 
                 // Convert the UnicodeString to UTF8
                 std::string strbuf;
@@ -623,14 +687,73 @@ unicode_dtype(size_t length)
     return result;
 }
 
-/*
-  infer the NumPy dtype and the sql_c_type to use from the
-  sql_type.
+/**
+ * @brief Coerce the column to the given dtype, without considering how the database stores the data.
+ *
+ * @param cd Column descriptor containing data about the column
+ * @param unicode If true, string types are all treated as unicode (they use the SQL_C_WCHAR type)
+ * @param descr dtype descriptor to use for the column; must not be NULL. Steals a reference
+ * to descr, as it gets stored on column_desc
+ * @return 0 if successful, nonzero otherwise
+ */
+int coerce_column_desc_types(column_desc &cd, bool unicode, PyArray_Descr *descr) {
+    cd.npy_type_descr_ = descr;
+    Py_INCREF(descr);
 
-  return 0 on success, 1 on failure
+    switch (descr->type_num) {
+        case NPY_STRING:
+            cd.sql_c_type_ = SQL_C_CHAR;
+            PyDataType_SET_ELSIZE(
+                descr,
+                static_cast<npy_int>(cd.sql_size_)
+            );
+            cd.element_buffer_size_ = descr->elsize;
+            break;
+        case NPY_UNICODE:
+            cd.sql_c_type_ = SQL_C_WCHAR;
+            PyDataType_SET_ELSIZE(
+                descr,
+                static_cast<npy_int>(cd.sql_size_)
+            );
+            cd.element_buffer_size_ = descr->elsize;
+            break;
+        case NPY_BYTE:
+        case NPY_UBYTE:
+            cd.sql_c_type_ = SQL_C_BINARY;
+            break;
+        case NPY_SHORT:
+        case NPY_USHORT:
+        case NPY_INT:
+        case NPY_UINT:
+        case NPY_LONG:
+        case NPY_ULONG:
+        case NPY_LONGLONG:
+        case NPY_ULONGLONG:
+            cd.sql_c_type_ = SQL_C_SBIGINT;
+            break;
+        case NPY_FLOAT:
+            cd.sql_c_type_ = SQL_C_FLOAT;
+            break;
+        case NPY_DOUBLE:
+        case NPY_LONGDOUBLE:
+        case NPY_CFLOAT:
+        case NPY_CDOUBLE:
+        case NPY_CLONGDOUBLE:
+            cd.sql_c_type_ = SQL_C_DOUBLE;
+            break;
+        default:
+            return 1;
+    }
+    return 0;
+}
 
-  remember to check support for any new NumPy type added in the function
-  that handles nulls (fill_NAvalue)
+/**
+ * @brief Infer the numpy type and the sql_c_type to use from the sql_type.
+ *
+ * @param cd Column descriptor
+ * @param unicode If true, unicode is assumed and all character-like types are treated as unicde
+ * @param descr Numpy dtype descriptor to be used; if NULL, the old style type inference is used
+ * @return
  */
 int
 map_column_desc_types(column_desc &cd, bool unicode)
@@ -639,7 +762,7 @@ map_column_desc_types(column_desc &cd, bool unicode)
     size_t sql_size = cd.sql_size_;
 
     switch (cd.sql_type_) {
-            // string types ------------------------------------------------
+        // string types ------------------------------------------------
         case SQL_CHAR:
         case SQL_VARCHAR:
         case SQL_LONGVARCHAR:
@@ -669,7 +792,7 @@ map_column_desc_types(column_desc &cd, bool unicode)
             }
         } break;
 
-            // real types --------------------------------------------------
+        // real types --------------------------------------------------
         case SQL_REAL:
             dtype = PyArray_DescrFromType(NPY_FLOAT);
             if (dtype) {
@@ -689,7 +812,7 @@ map_column_desc_types(column_desc &cd, bool unicode)
             }
             break;
 
-            // integer types -----------------------------------------------
+        // integer types -----------------------------------------------
         case SQL_BIT:
             dtype = PyArray_DescrFromType(NPY_BOOL);
             if (dtype) {
@@ -735,7 +858,7 @@ map_column_desc_types(column_desc &cd, bool unicode)
             }
             break;
 
-            // time related types ------------------------------------------
+        // time related types ------------------------------------------
         case SQL_TYPE_DATE:
             if (CAN_USE_DATETIME) {
                 dtype = dtype_from_string("M8[D]");
@@ -770,9 +893,9 @@ map_column_desc_types(column_desc &cd, bool unicode)
             }
             break;
 
-            // decimal -----------------------------------------------------
-            // Note: these are mapped as double as per a request
-            //       this means precision may be lost.
+        // decimal -----------------------------------------------------
+        // Note: these are mapped as double as per a request
+        //       this means precision may be lost.
         case SQL_DECIMAL:
         case SQL_NUMERIC:
             dtype = PyArray_DescrFromType(NPY_DOUBLE);
@@ -783,10 +906,26 @@ map_column_desc_types(column_desc &cd, bool unicode)
             }
             break;
 
-            // unsupported types -------------------------------------------
-            // this includes:
-            // blobs:
-            // SQL_BINARY, SQL_VARBINARY, SQL_LONGVARBINARY
+        // Binary data types. These are null-padded bytestrings with a maximum
+        // length fixed by the length of the longest bytestring in the array.
+        // https://numpy.org/doc/stable/reference/c-api/dtype.html#c.NPY_TYPES.NPY_STRING
+        case SQL_BINARY:
+        case SQL_VARBINARY:
+        case SQL_LONGVARBINARY:
+            dtype = PyArray_DescrFromType(NPY_STRING);
+            if (dtype != NULL) {
+                // Set the element size for numpy
+                PyDataType_SET_ELSIZE(
+                    dtype,
+                    static_cast<npy_int>(cd.sql_size_)
+                );
+
+                // Set the element size that gets passed to SQLBindCol
+                cd.element_buffer_size_ = dtype->elsize;
+                cd.npy_type_descr_ = dtype;
+                cd.sql_c_type_ = SQL_C_BINARY;
+                return 0;
+            }
         default:
             break;
     }
@@ -799,9 +938,9 @@ struct query_desc {
     SQLRETURN bind_cols();
 
     void lowercase_fields();
-    int translate_types(bool use_unicode);
+    int translate_types(bool use_unicode, PyObject *target_dtype, int &unsupported_fields);
     int ensure();
-    void convert(size_t read);
+    int convert(size_t read);
     void advance(size_t read);
 
     int allocate_buffers(size_t initial_result_count, size_t chunk_size, bool keep_nulls);
@@ -843,9 +982,17 @@ query_desc::init_from_statement(SQLHSTMT hstmt)
     // columns are 1 base on ODBC...
     for (SQLSMALLINT field = 1; field <= field_count; field++) {
         column_desc &c_desc = columns_[field - 1];
-        ret = SQLDescribeCol(hstmt, field, &c_desc.sql_name_[0], _countof(c_desc.sql_name_), NULL,
-                             &c_desc.sql_type_, &c_desc.sql_size_, &c_desc.sql_decimal_,
-                             &c_desc.sql_nullable_);
+        ret = SQLDescribeCol(
+            hstmt,
+            field,
+            &c_desc.sql_name_[0],
+            _countof(c_desc.sql_name_), // Max column name size is 300
+            NULL,
+            &c_desc.sql_type_,
+            &c_desc.sql_size_, // Maximum string length that can be stored in the column
+            &c_desc.sql_decimal_,
+            &c_desc.sql_nullable_
+        );
 
         if (!SQL_SUCCEEDED(ret)) {
             return ret;
@@ -871,8 +1018,14 @@ query_desc::bind_cols()
                                            (this->offset_ * PyArray_ITEMSIZE(array)));
         }
 
-        SQLRETURN status = SQLBindCol(hstmt_, col_number, it->sql_c_type_, bind_ptr,
-                                      it->element_buffer_size_, it->null_buffer_);
+        SQLRETURN status = SQLBindCol(
+            hstmt_,
+            col_number,
+            it->sql_c_type_,
+            bind_ptr,
+            it->element_buffer_size_,
+            it->null_buffer_
+        );
         if (!SQL_SUCCEEDED(status)) {
             return status;
         }
@@ -894,37 +1047,113 @@ query_desc::lowercase_fields()
     }
 }
 
-/*
-  Performs the mapping of types from SQL to numpy dtype and C type.
-  returns a count with the number of failed translations
-*/
-int
-query_desc::translate_types(bool use_unicode)
-{
-    int failed_translations = 0;
-    for (std::vector<column_desc>::iterator it = columns_.begin(); it < columns_.end(); ++it) {
-        failed_translations += map_column_desc_types(*it, use_unicode);
-    }
-
-    return failed_translations;
-}
-
-/*
-  allocate buffers to execute the query.
-  row_count: initial rows to preallocate for the results
-  chunk_row_count: rows to allocate for "per-chunk" buffers
-
-  returns the number of failed allocations.
+/**
+ * @brief Map the SQL types to numpy dtype and C type.
+ *
+ * @param use_unicode If true, unicode is assumed and all character-like types are treated as unicode
+ * @param target_dtypes A python dictionary of {column name: numpy dtype}
+ * @param unsupported_fields An integer which will be written with the number of unsupported columns
+ * @return 0 if successful, -1 if an error occurred; the Python error indicator will be set
  */
 int
-query_desc::allocate_buffers(size_t buffer_element_count, size_t chunk_element_count,
-                             bool keep_nulls)
+query_desc::translate_types(bool use_unicode, PyObject *target_dtypes, int &unsupported_fields)
 {
+    if (target_dtypes == NULL) {
+        for (auto &column: this->columns_) {
+            unsupported_fields += map_column_desc_types(column, use_unicode);
+        }
+    } else {
+        if (!PyDict_Check(target_dtypes)) {
+            PyErr_SetString(
+                PyExc_ValueError,
+                "target_dtypes must be a dictionary of {column name: dtype}"
+            );
+            return -1;
+        }
+
+        PyArray_Descr *descr = NULL;
+
+        for (auto &column: this->columns_) {
+            PyObject *target_dtype = PyDict_GetItemString(
+                target_dtypes,
+                reinterpret_cast<const char *>(column.sql_name_)
+            );
+            if (target_dtype == NULL) {
+                unsupported_fields += map_column_desc_types(column, use_unicode);
+            } else {
+                int conversion_result = PyArray_DescrConverter(target_dtype, &descr);
+
+                // Sometimes PyArray_DescrConverter returns < 0 to indicate errors, other
+                // times it doesn't but descr == NULL. In either case, we need to do error handling.
+                if (conversion_result < 0 || descr == NULL) {
+                    // Get the string representation of the requested dtype
+                    PyObject *target_dtype_str = PyObject_Str(target_dtype);
+                    if (target_dtype_str == NULL) {
+                        PyErr_Format(
+                            PyExc_TypeError,
+                            "Invalid dtype for column '%s'; cannot print dtype due to error calling __str__.",
+                            column.sql_name_
+                        );
+                        Py_XDECREF(descr);
+                        return -1;
+                    }
+
+                    // Convert the python string to a unicode const char *
+                    const char *str = PyUnicode_AsUTF8(target_dtype);
+                    if (str == NULL) {
+                        PyErr_Format(
+                            PyExc_TypeError,
+                            "Invalid dtype for column '%s'; error getting the unicode representation of str(<requested dtype>)",
+                            column.sql_name_
+                        );
+                        Py_DECREF(target_dtype_str);
+                        Py_XDECREF(descr);
+                        return -1;
+                    }
+
+                    // Print the error string
+                    PyErr_Format(
+                        PyExc_TypeError,
+                        "Invalid dtype '%s' for column '%s'",
+                        str,
+                        column.sql_name_
+                    );
+                    Py_DECREF(target_dtype_str);
+                    Py_XDECREF(descr);
+                    return -1;
+                }
+                // coerce_column_desc_types takes ownership of descr; no Py_DECREF needed
+                unsupported_fields += coerce_column_desc_types(column, use_unicode, descr);
+            }
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Allocate buffers to execute the query.
+ *
+ * If the number of rows to fetch < 0, buffer_element_count and chunk_element_count are set to
+ * DEFAULT_ROWS_TO_BE_ALLOCATE and DEFAULT_ROWS_TO_BE_FETCHED respectively, and can thus be
+ * different. Otherwise they are the same number.
+ *
+ * @param buffer_element_count Initial rows to preallocate for the results
+ * @param chunk_element_count Rows to allocate for "per-chunk" buffers
+ * @param keep_nulls
+ * @return The number of failed allocations.
+ */
+int
+query_desc::allocate_buffers(
+    size_t buffer_element_count,
+    size_t chunk_element_count,
+    bool keep_nulls
+) {
     int alloc_errors = 0;
     npy_intp npy_array_count = static_cast<npy_intp>(buffer_element_count);
 
     for (std::vector<column_desc>::iterator it = columns_.begin(); it < columns_.end(); ++it) {
-        // Allocate the numpy buffer for the result
+        // Allocate the numpy buffer for the result; only one dimension is needed here, and it is
+        // of size npy_array_count.
         PyObject *arr = PyArray_SimpleNewFromDescr(1, &npy_array_count, it->npy_type_descr_);
         if (!arr) {
             // failed to allocate mem_buffer
@@ -1095,7 +1324,7 @@ query_desc::ensure()
   The conversion also includes the handling of nulls. In the case of
   NULL a default value is inserted in the resulting column.
  */
-void
+int
 query_desc::convert(size_t count)
 {
     for (std::vector<column_desc>::iterator it = columns_.begin(); it < columns_.end(); ++it) {
@@ -1105,13 +1334,29 @@ query_desc::convert(size_t count)
         //       Probably nulls could be handled by that conversion
         //       function as well.
         if (it->scratch_buffer_) {  // a conversion is needed
-            convert_buffer(it->npy_array_, it->scratch_buffer_, it->sql_c_type_, offset_, count);
+            convert_buffer(it->npy_array_, it->scratch_buffer_, it->sql_c_type_, this->offset_, count);
         }
 
-        if (it->null_buffer_) {  // nulls are present
-            fill_NAarray(it->npy_array_, it->npy_array_nulls_, it->null_buffer_, offset_, count);
+        // When used with SQLFetchScroll (as is the case here), SQLBindCol can set values in
+        // the `null_buffer_` to one of the following:
+        // - The length of the data available to return
+        // - SQL_NO_TOTAL (length of data is unknown)
+        // - SQL_NULL_DATA (no data was returned)
+        if (it->null_buffer_) {
+            if (
+                fill_NAarray(
+                    it->npy_array_,
+                    it->npy_array_nulls_,
+                    it->null_buffer_,
+                    this->offset_,
+                    count
+                ) < 0
+            ) {
+                return -1;
+            }
         }
     }
+    return 0;
 }
 
 /*
@@ -1178,23 +1423,19 @@ raise_unsupported_types_exception(int err_count, query_desc &qd)
 }
 
 /**
-// Takes an ODBC cursor object and creates a Python dictionary of
-// NumPy arrays. It also creates some helpers for the NULLS, and
-// datetimes.
-//
-// This is called after the ODBC query is complete.
-//
-// @param cur    The ODBC cursor object.
-//
-// @param nrows  The number of rows that were returned by the query.
-//
-// @param lower If true, makes the column names in the NumPy dtype all
-//              lowercase.
-//
-// @returns 0 on success
-*/
+ * @brief Create a python dictionary of numpy arrays from the ODBC cursor.
+ *
+ * @param result Query descriptor that stores the data fetched from the database
+ * @param cur ODBC cursor pointing to data to fetch
+ * @param nrows Number of rows to fetch
+ * @param lower If true, make the column names all lowercase
+ * @param want_nulls If true, null values are kept
+ * @param target_dtypes A python dictionary of dtypes to cast the result to;
+ * if unspecified, the old type inference behavior is used
+ * @return 0 if no errors were encountered, nonzero otherwise
+ */
 static int
-perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower, bool want_nulls)
+perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower, bool want_nulls, PyObject *target_dtypes)
 {
     SQLRETURN rc;
     /* XXX is true a good default?
@@ -1248,8 +1489,11 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
         result.lowercase_fields();
     }
 
-    int unsupported_fields = result.translate_types(use_unicode);
-    if (unsupported_fields) {
+    int unsupported_fields = 0;
+    if (result.translate_types(use_unicode, target_dtypes, unsupported_fields) < 0) {
+        return -1;
+    }
+    if (unsupported_fields > 0) {
         // TODO: add better diagnosis, pointing out the fields and
         // their types in a human readable form.
         return 0 == raise_unsupported_types_exception(unsupported_fields, result);
@@ -1277,7 +1521,7 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
         // According to the microsoft sql docs for SQLFetchScroll:
         //
         //    SQL_FETCH_NEXT 	Return the next rowset. This is equivalent to calling
-        //    SQLFetch.
+        //                      SQLFetch.
         //                      SQLFetchScroll ignores the value of FetchOffset.
         //
         // Why is this used here?
@@ -1306,7 +1550,9 @@ perform_array_query(query_desc &result, Cursor *cur, npy_intp nrows, bool lower,
             status.rows_read_ = 0;
         }
 
-        result.convert(status.rows_read_);
+        if (result.convert(status.rows_read_) < 0) {
+            return -1;
+        }
         result.advance(status.rows_read_);
 
         // This exits the loop when the amount of rows was known
@@ -1348,10 +1594,16 @@ query_desc_to_dictarray(query_desc &qd, const char *null_suffix)
     }
 
     int rv;
-    for (std::vector<column_desc>::iterator it = qd.columns_.begin(); it < qd.columns_.end();
-         ++it) {
-        rv = PyDict_SetItemString(dictarray, reinterpret_cast<char *>(it->sql_name_),
-                                  reinterpret_cast<PyObject *>(it->npy_array_));
+    for (
+        std::vector<column_desc>::iterator it = qd.columns_.begin();
+        it < qd.columns_.end();
+        ++it
+    ) {
+        rv = PyDict_SetItemString(
+            dictarray,
+            reinterpret_cast<char *>(it->sql_name_),
+            reinterpret_cast<PyObject *>(it->npy_array_)
+        );
 
         if (rv < 0) {
             // PyDict_SetItemString will set the error indicator if something goes
@@ -1383,13 +1635,14 @@ query_desc_to_dictarray(query_desc &qd, const char *null_suffix)
  * @param nrows Number of rows to fetch; if nrows = -1, all rows are fetched
  * @param null_suffix Suffix to add to the column name for the bool column holding the
  * nulls; NULL means nulls are not returned
+ * @param target_dtypes A python dictionary containing numpy dtypes to use for the columns
  * @return A Python dictionary filled with numpy arrays
  */
 static PyObject *
-create_fill_dictarray(Cursor *cursor, npy_intp nrows, const char *null_suffix)
+create_fill_dictarray(Cursor *cursor, npy_intp nrows, const char *null_suffix, PyObject *target_dtypes)
 {
     query_desc qd;
-    if (perform_array_query(qd, cursor, nrows, lowercase(), null_suffix != 0) != 0) {
+    if (perform_array_query(qd, cursor, nrows, lowercase(), null_suffix != 0, target_dtypes) != 0) {
         return NULL;
     }
     return query_desc_to_dictarray(qd, null_suffix);
@@ -1400,6 +1653,7 @@ static const char *Cursor_npfetch_kwnames[] = {
     "return_nulls",  // keyword to make a given fetch to add boolean columns for
                      // nulls
     "null_suffix",   // keyword providing the string to use as suffix
+    "target_dtypes", // dict of numpy dtypes to use for each column
     NULL
 };
 
@@ -1416,7 +1670,7 @@ Cursor_fetchdictarray(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *numpy = PyImport_ImportModule("numpy");
     if (!numpy) {
-        return 0;
+        return NULL;
     }
     Cursor *cursor = Cursor_Validate(self, CURSOR_REQUIRE_RESULTS | CURSOR_RAISE_ERROR);
     if (!cursor) {
@@ -1427,15 +1681,18 @@ Cursor_fetchdictarray(PyObject *self, PyObject *args, PyObject *kwargs)
     Py_ssize_t nrows = -1;
     bool return_nulls = false;
     const char *null_suffix = "_isnull";
+    PyObject *target_dtypes = NULL;
+
     if (
         !PyArg_ParseTupleAndKeywords(
             args,
             kwargs,
-            "|nps",
+            "|npsO",
             const_cast<char **>(Cursor_npfetch_kwnames),
             &nrows,
             &return_nulls,
-            &null_suffix
+            &null_suffix,
+            &target_dtypes
         )
     ) {
         Py_DECREF(numpy);
@@ -1448,12 +1705,13 @@ Cursor_fetchdictarray(PyObject *self, PyObject *args, PyObject *kwargs)
         CAN_USE_DATETIME = true;
     }
 
+    PyObject *dictarr = create_fill_dictarray(cursor, nrows, return_nulls ? null_suffix : 0, target_dtypes);
     Py_DECREF(numpy);
-    return create_fill_dictarray(cursor, nrows, return_nulls ? null_suffix : 0);
+    return dictarr;
 }
 
 char fetchdictarray_doc[] =
-        "fetchdictarray(size=-1, return_nulls=False, null_suffix='_isnull')\n"
+        "fetchdictarray(size=-1, return_nulls=False, null_suffix='_isnull', target_dtypes=None)\n"
         "                               --> a dictionary of column arrays.\n"
         "\n"
         "Fetch as many rows as specified by size into a dictionary of NumPy\n"
@@ -1471,6 +1729,10 @@ char fetchdictarray_doc[] =
         "    If True, information about null values will be included adding a\n"
         "    boolean array using as key a string  built by concatenating the\n"
         "    column name and null_suffix.\n"
+        "target_dtypes : dict, optional\n"
+        "    If provided, this mapping between {column name: dtype} coerces \n"
+        "    the values read from the database into arrays of the requested\n"
+        "    dtypes.\n"
         "null_suffix : string, optional\n"
         "    A string used as a suffix when building the key for null values.\n"
         "    Only used if return_nulls is True.\n"

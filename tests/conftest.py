@@ -2,7 +2,14 @@ import npyodbc
 import pytest
 
 
-def get_running_test_dbs():
+def get_running_test_dbs() -> dict[str, npyodbc.Connection]:
+    """Get the running database services.
+
+    Returns
+    -------
+    dict[str, npyodbc.Connection]
+        Mapping between the connection name and an npyodbc Connection, if available.
+    """
     connections = {
         "sqlite": "Driver=SQLite3;Database=:memory:;Charset=UTF8",
         "postgres": "DRIVER={PostgreSQL Unicode};SERVER=localhost;PORT=5432;UID=postgres_user;PWD=postgres_pwd;DATABASE=test",
@@ -13,20 +20,26 @@ def get_running_test_dbs():
     }
     for db, connection_str in connections.items():
         try:
-            npyodbc.connect(connection_str)
+            npyodbc.connect(connection_str, timeout=1)
             print(f"{db} database service is running.")
-        except Exception as e:
+        except Exception:
             connections[db] = None
             print(f"{db} database service is not running; tests will be skipped.")
-            print(e)
     return connections
 
 
 DATABASES = get_running_test_dbs()
 
-def pytest_runtest_setup(item):
-    # Check all tests that have database markers to ensure the database is running
-    # as a service; skip if no connection can be made.
+def pytest_runtest_setup(item: pytest.Item):
+    """Check that all tests that have database markers have a running database service.
+
+    Tests marked with databases that are not running are skipped.
+
+    Parameters
+    ----------
+    item : pytest.Item
+        Test invocation item; potentially annotated
+    """
     for marker in item.iter_markers():
         if marker.name in DATABASES and DATABASES[marker.name] is None:
             pytest.skip(f"{marker.name} database is not running.")
