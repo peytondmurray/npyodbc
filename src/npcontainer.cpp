@@ -25,6 +25,8 @@
 // do not correctly specify includes inside themselves,
 // and there will be undefined objects if the order is changed.
 #include "pyodbc.h"
+#include "wrapper.h"
+#include "textenc.h"
 #include "connection.h"
 #include "cursor.h"
 #include "dbspecific.h"

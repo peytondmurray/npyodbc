@@ -1,3 +1,7 @@
+exclude: |
+  (?x)^(
+    subprojects/packagefiles/patches/.*
+  )
 repos:
   # Prevent commits to the main branch.
   - repo: https://github.com/pre-commit/pre-commit-hooks

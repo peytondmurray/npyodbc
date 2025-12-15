@@ -17,7 +17,7 @@ jobs:
       - name: Install sqlite
         run: |
           sudo apt update
-          sudo apt install -y sqlite unixodbc-dev libsqliteodbc
+          sudo apt install -y sqlite3 unixodbc-dev libsqliteodbc
 
       - name: Install npyodbc
         run: |

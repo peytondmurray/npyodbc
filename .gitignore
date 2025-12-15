@@ -1,11 +1,7 @@
 # Meson
-subprojects/*
-!subprojects/*.wrap
-!subprojects/packagefiles
 build/
-subprojects/packagefiles/patches/*.h
-subprojects/packagefiles/patches/*.cpp
-subprojects/packagefiles/patches/*.toml
+subprojects/pyodbc/
+subprojects/.wraplock
 
 # Python
 __pycache__/
