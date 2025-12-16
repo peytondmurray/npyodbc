@@ -6,6 +6,7 @@ subprojects/.wraplock
 # Python
 __pycache__/
 .ipynb_checkpoints/
+dist/
 
 # C++
 compile_commands.json
