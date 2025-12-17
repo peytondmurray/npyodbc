@@ -29,7 +29,6 @@ pyodbc_inc = include_directories(
   'src',
   is_system: true
 )
-
 pyodbc_dep = declare_dependency(
   sources: pyodbc_sources,
   dependencies: [
