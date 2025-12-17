@@ -96,7 +96,7 @@ jobs:
           # https://github.com/pypa/manylinux#docker-images
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_ARCHS_LINUX: x86_64 aarch64
-          CIBW_BEFORE_ALL_LINUX: yum -y install unixODBC-devel icu
+          CIBW_BEFORE_ALL_LINUX: yum -y install unixODBC-devel libicu-devel meson
           # Intel64 and ARM64 wheels
           CIBW_BUILD: "cp*-manylinux_x86_64 cp*-manylinux_aarch64"
           # the raw wheel filename is not PyPi compliant so the wheel must be repaired but
@@ -130,7 +130,7 @@ jobs:
           # https://github.com/pypa/manylinux#docker-images
           CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_2
           CIBW_ARCHS_LINUX: x86_64 aarch64
-          CIBW_BEFORE_ALL_LINUX: apk add unixodbc-dev icu
+          CIBW_BEFORE_ALL_LINUX: apk add unixodbc-dev icu-dev meson
           # Intel64 and ARM64 wheels
           CIBW_BUILD: "cp*-musllinux_x86_64 cp*-musllinux_aarch64"
           # the raw wheel filename is not PyPi compliant so the wheel must be repaired but
@@ -145,33 +145,6 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: wheels_ubuntu_musllinux__${{ github.sha }}
-          path: ./wheelhouse/*.whl
-
-  build_macos_x86_wheels:
-    name: Build wheels on macOS x86_64
-    runs-on: macos-13
-
-    steps:
-      - uses: actions/checkout@v4.3.0
-
-      - name: Install ICU
-        run: |
-          brew install icu4c
-          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$(brew --prefix icu4c)/lib/pkgconfig" >> $GITHUB_ENV
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.1
-        # https://cibuildwheel.readthedocs.io/en/stable/options/#options-summary
-        env:
-          CIBW_ARCHS_MACOS: x86_64
-          CIBW_BUILD: "cp*macosx_x86_64"
-          # suppress the inclusion of the unixODBC dynamic libraries by disabling the repair command
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v6
-        with:
-          name: wheels_macos_x86__${{ github.sha }}
           path: ./wheelhouse/*.whl
 
   build_macos_arm64_wheels:
