@@ -39,7 +39,6 @@ add_project_arguments(
   language: 'cpp'
 )
 
-includes = []
 deps = []
 cflags = []
 lflags = []
@@ -94,7 +93,7 @@ python.extension_module(
     pyodbc_dep,
     icu_dep,
   ] + deps,
-  include_directories : [npyodbc_inc] + includes,
+  include_directories : [npyodbc_inc],
   install : true,
   cpp_args : cflags,
   link_args : lflags,
