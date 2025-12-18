@@ -59,6 +59,12 @@ jobs:
           ninja: true
           vcpkg: true
 
+      - name: Install icu, pkgconf
+        run: |
+          vcpkg install icu pkgconf
+          echo "PKG_CONFIG=$env:VCPKG_ROOT/installed/x64-windows/tools/pkgconf/pkgconf.exe" >> $env:GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$env:VCPKG_ROOT/installed/x64-windows/lib/pkgconfig" >> $env:GITHUB_ENV
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
         env:
@@ -91,6 +97,12 @@ jobs:
           cmake: true
           ninja: true
           vcpkg: true
+
+      - name: Install icu, pkgconf
+        run: |
+          vcpkg install icu pkgconf
+          echo "PKG_CONFIG=$env:VCPKG_ROOT/installed/arm64-windows/tools/pkgconf/pkgconf.exe" >> $env:GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$env:VCPKG_ROOT/installed/arm64-windows/lib/pkgconfig" >> $env:GITHUB_ENV
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
