@@ -46,10 +46,6 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Disable git line ending changes
-        run: |
-          git config --global core.autocrlf false
-
       - uses: actions/checkout@v4.3.0
 
       # https://github.com/actions/runner-images/issues/9894#issuecomment-2120538177
@@ -83,10 +79,6 @@ jobs:
     runs-on: windows-11-arm
 
     steps:
-      - name: Disable git line ending changes
-        run: |
-          git config --global core.autocrlf false
-
       - uses: actions/checkout@v4.3.0
 
       # https://github.com/actions/runner-images/issues/9894#issuecomment-2120538177
