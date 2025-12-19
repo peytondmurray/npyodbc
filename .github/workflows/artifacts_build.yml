@@ -66,9 +66,10 @@ jobs:
         shell: bash
         run: |
           vcpkg install icu pkgconf
-          echo "PKG_CONFIG_PATH=$VCPKG_ROOT/installed/x64-windows/lib/pkgconfig" >> $GITHUB_ENV
-          echo "PKG_CONFIG=$VCPKG_ROOT/installed/x64-windows/tools/pkgconf/pkgconf.exe" >> $GITHUB_ENV
-          ls -las "$VCPKG_ROOT/installed/x64-windows/lib/pkgconfig/"
+          echo PKG_CONFIG_PATH="$VCPKG_ROOT/installed/x64-windows/lib/pkgconfig" >> $GITHUB_ENV
+          echo PKG_CONFIG="$VCPKG_ROOT/installed/x64-windows/tools/pkgconf/pkgconf.exe" >> $GITHUB_ENV
+
+      - uses: mxschmitt/action-tmate@v3
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
