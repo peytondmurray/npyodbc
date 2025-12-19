@@ -64,20 +64,18 @@ jobs:
         run: |
           vcpkg install icu
           choco install pkgconfiglite -y
-          echo "PKG_CONFIG_PATH=/c/Users/runneradmin/vcpkg/installed/x64-windows/lib/pkgconfig/" >> $GITHUB_ENV
-          ls -lash --group-directories-first $PKG_CONFIG_PATH
-          # echo "PKG_CONFIG_PATH=$VCPKG_ROOT/installed/x64-windows/lib/pkgconfig" >> $GITHUB_ENV
-
-      - uses: mxschmitt/action-tmate@v3
+          ls -las /c/Users/runneradmin/vcpkg/installed/x64-windows/lib/pkgconfig/
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
         env:
           CIBW_ARCHS_WINDOWS: "AMD64 x86"
-          # AMD64  wheels
+          # amd64 wheels
           CIBW_BUILD: "cp*-win_amd64"
           CIBW_SKIP: "*-win32"
-          CIBW_ENVIRONMENT: "PYTHONUTF8=1"
+          CIBW_ENVIRONMENT: >
+            PYTHONUTF8=1
+            PKG_CONFIG_PATH="/c/Users/runneradmin/vcpkg/installed/x64-windows/lib/pkgconfig/"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v6
