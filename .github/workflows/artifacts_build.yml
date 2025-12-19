@@ -65,9 +65,10 @@ jobs:
           vcpkg install icu
           choco install pkgconfiglite -y
           echo "PKG_CONFIG_PATH=/c/Users/runneradmin/vcpkg/installed/x64-windows/lib/pkgconfig/" >> $GITHUB_ENV
+          ls -lash --group-directories-first $PKG_CONFIG_PATH
           # echo "PKG_CONFIG_PATH=$VCPKG_ROOT/installed/x64-windows/lib/pkgconfig" >> $GITHUB_ENV
 
-      # - uses: mxschmitt/action-tmate@v3
+      - uses: mxschmitt/action-tmate@v3
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
