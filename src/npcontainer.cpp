@@ -5,6 +5,7 @@
 // Copyright: Continuum Analytics 2012-2014
 //
 
+#include "numpy/npy_common.h"
 #include <cstdlib>
 #include <unicode/unistr.h>
 #include <unicode/ucnv.h>
@@ -20,6 +21,7 @@
 #include "numpy/ndarrayobject.h"
 #include "numpy/npy_math.h"
 #include "numpy/numpyconfig.h"
+#include "numpy/halffloat.h"
 
 #if NPY_ABI_VERSION >= 0x02000000
 // If we compile with numpy>=2, include npy_2_compat.h which allows running against numpy<2
@@ -329,60 +331,73 @@ fill_NAvalue(void *value, PyArray_Descr *dtype)
         case NPY_BOOL:
             ((npy_bool *)value)[0] = 0;  // XXX False is a good default?
             break;
-        case NPY_INT8:
-            ((npy_int8 *)value)[0] = NPY_MIN_INT8;
+        case NPY_BYTE:
+            ((npy_byte *)value)[0] = NPY_MAX_BYTE;
             break;
-        case NPY_INT16:
-            ((npy_int16 *)value)[0] = NPY_MIN_INT16;
+        case NPY_UBYTE:
+            ((npy_ubyte *)value)[0] = NPY_MAX_UBYTE;
             break;
-        case NPY_INT32:
-            ((npy_int32 *)value)[0] = NPY_MIN_INT32;
+        case NPY_SHORT:
+            ((npy_short *)value)[0] = NPY_MAX_SHORT;
             break;
-        case NPY_INT64:
-            ((npy_int64 *)value)[0] = NPY_MIN_INT64;
+        case NPY_USHORT:
+            ((npy_ushort *)value)[0] = NPY_MAX_USHORT;
             break;
-        case NPY_UINT8:
-            // For uint use max, as 0 is more likely to be valid data.
-            ((npy_uint8 *)value)[0] = NPY_MAX_UINT8;
+        case NPY_INT:
+            ((npy_int *)value)[0] = NPY_MAX_INT;
             break;
-        case NPY_UINT16:
-            // For uint use max, as 0 is more likely to be valid data.
-            ((npy_uint16 *)value)[0] = NPY_MAX_UINT16;
+        case NPY_UINT:
+            ((npy_uint *)value)[0] = NPY_MAX_UINT;
             break;
-        case NPY_UINT32:
-            // For uint use max, as 0 is more likely to be valid data.
-            ((npy_uint32 *)value)[0] = NPY_MAX_UINT32;
+        case NPY_LONG:
+            ((npy_long *)value)[0] = NPY_MAX_LONG;
             break;
-        case NPY_UINT64:
-            // For uint use max, as 0 is more likely to be valid data.
-            ((npy_uint64 *)value)[0] = NPY_MAX_UINT64;
+        case NPY_ULONG:
+            ((npy_ulong *)value)[0] = NPY_MAX_ULONG;
             break;
-        case NPY_FLOAT16:
-            ((npy_float16 *)value)[0] = NPY_NANF;
+        case NPY_LONGLONG:
+            ((npy_longlong *)value)[0] = NPY_MAX_LONGLONG;
             break;
-        case NPY_FLOAT32:
-            ((npy_float32 *)value)[0] = NPY_NANF;
+        case NPY_ULONGLONG:
+            ((npy_ulonglong *)value)[0] = NPY_MAX_ULONGLONG;
             break;
-        case NPY_FLOAT64:
-            ((npy_float64 *)value)[0] = NPY_NANL;
+        case NPY_HALF:
+            ((npy_half *)value)[0] = NPY_HALF_NAN;
             break;
-        case NPY_FLOAT128:
-            ((npy_float128 *)value)[0] = NPY_NANL;
+        case NPY_FLOAT:
+            ((npy_float *)value)[0] = NPY_NANF;
+            break;
+        case NPY_DOUBLE:
+            ((npy_float *)value)[0] = NPY_NAN;
+            break;
+        case NPY_LONGDOUBLE:
+            ((npy_float *)value)[0] = NPY_NANL;
+            break;
+        case NPY_CFLOAT:
+            ((npy_cfloat *)value)[0] = {NPY_NANF, NPY_NANF};
+            break;
+        case NPY_CDOUBLE:
+            ((npy_cdouble *)value)[0] = {NPY_NAN, NPY_NAN};
+            break;
+        case NPY_CLONGDOUBLE:
+            ((npy_clongdouble *)value)[0] = {NPY_NANL, NPY_NANL};
             break;
         case NPY_STRING:
         case NPY_UNICODE:
             memset(value, 0, static_cast<size_t>(PyDataType_ELSIZE(dtype)));
             break;
         case NPY_DATETIME:
-            ((npy_int64 *)value)[0] = NPY_DATETIME_NAT;
-            break;
         case NPY_TIMEDELTA:
             ((npy_int64 *)value)[0] = NPY_DATETIME_NAT;
             break;
-        case NPY_COMPLEX64:
-        case NPY_COMPLEX128:
-        case NPY_COMPLEX256:
+
+#if NPY_ABI_VERSION >= 0x02000000
+        case NPY_VSTRING:
+#endif
         case NPY_OBJECT:
+        case NPY_VOID:
+        case NPY_NOTYPE:
+        case NPY_USERDEF:
         default:
             PyObject *typestr = PyObject_Str((PyObject *)dtype->typeobj);
 
