@@ -229,7 +229,7 @@ jobs:
       - build_ubuntu_manylinux_wheels
       - build_ubuntu_musllinux_wheels
       - build_windows_arm64_wheels
-      - build_windows_x86_wheels
+      - build_windows_amd64_wheels
 
     environment:
       name: pypi
