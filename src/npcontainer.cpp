@@ -12,7 +12,6 @@
 #define NPY_NO_DEPRECATED_API NPY_1_25_API_VERSION
 
 #include <Python.h>
-#include <sqltypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -50,6 +49,7 @@ PyDataType_ELSIZE(PyArray_Descr *dtype) {
 #include "dbspecific.h"
 #include "errors.h"
 #include "pyodbcmodule.h"
+#include <sqltypes.h>
 // clang-format on
 
 #include "npcontainer.h"

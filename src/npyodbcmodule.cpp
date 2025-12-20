@@ -1,8 +1,4 @@
 #include <Python.h>
-#include "numpy/numpyconfig.h"
-#include <sql.h>
-#include <sqlext.h>
-
 #include "methodobject.h"
 #include "modsupport.h"
 #include "pyodbc.h"
@@ -10,6 +6,10 @@
 #include "textenc.h"
 #include "connection.h"
 #include "pyodbcmodule.h"
+
+#include "numpy/numpyconfig.h"
+#include <sql.h>
+#include <sqlext.h>
 
 // Set declaration for the pyodbc initialization function
 // defined in pyodbcmodule.h -> pyodbcmodule.cpp
