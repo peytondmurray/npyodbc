@@ -1,7 +1,8 @@
 [wrap-git]
 directory = pyodbc
 url = https://github.com/mkleehammer/pyodbc.git
-revision = 5.3.0
+# 5.3.0
+revision = 7ee5b566984f7bd3d8fcfa0369e9e163e70e1cbd
 depth = 1
 patch_directory = pyodbc
 diff_files = patches/pyproject.patch, patches/cursor.patch, patches/pyodbcmodule.patch
