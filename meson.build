@@ -54,6 +54,7 @@ if host_machine.system() == 'windows'
     '/wd4127',
     '/wd4191',
     '/d2FH4-',
+    '/Zc:strictStrings-',
   ]
 
   lflags = ['/d2:-FH4-']
