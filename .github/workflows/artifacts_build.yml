@@ -44,9 +44,6 @@ jobs:
   build_windows_x86_wheels:
     name: Build wheels on Windows x86_64
     runs-on: windows-latest
-    env:
-      VCPKG_ROOT: C:/Users/runneradmin/vcpkg
-      VCPKG_DEFAULT_TRIPLET: x64-windows
 
     steps:
       - uses: actions/checkout@v4.3.0
@@ -66,8 +63,6 @@ jobs:
         shell: bash
         run: |
           vcpkg install icu pkgconf
-          echo PKG_CONFIG_PATH="$VCPKG_ROOT/installed/x64-windows/lib/pkgconfig" >> $GITHUB_ENV
-          echo PKG_CONFIG="$VCPKG_ROOT/installed/x64-windows/tools/pkgconf/pkgconf.exe" >> $GITHUB_ENV
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
@@ -78,8 +73,8 @@ jobs:
           CIBW_SKIP: "*-win32"
           CIBW_ENVIRONMENT: >
             PYTHONUTF8=1
-            PKG_CONFIG="${{ env.VCPKG_ROOT }}/installed/x64-windows/tools/pkgconf/pkgconf.exe"
-            PKG_CONFIG_PATH="${{ env.VCPKG_ROOT }}/installed/x64-windows/lib/pkgconfig/"
+            PKG_CONFIG='C:/Users/runneradmin/vcpkg/installed/x64-windows/tools/pkgconf/pkgconf.exe'
+            PKG_CONFIG_PATH='C:/Users/runneradmin/vcpkg/installed/x64-windows/lib/pkgconfig/'
 
       - name: Upload wheels
         uses: actions/upload-artifact@v6
