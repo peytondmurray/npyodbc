@@ -45,9 +45,7 @@ You can install `npyodbc` via pip:
 pip install npyodbc
 ```
 
-#### Development installation
-
-If you've cloned this repository and want to work on it locally,
+If you've cloned this repository and want to develop `npyodbc`,
 
 ```sh
 pip install -e '.[dev,test]'
@@ -59,7 +57,6 @@ Let's set up a containerized database as an example (you'll need `docker` before
 we begin):
 
 1. Create a `docker-compose.yml` containing the following:
-
 ```docker-compose
 services:
   postgres:
@@ -76,7 +73,6 @@ services:
 
 2. Start the container: `docker compose up --build`
 3. Configure your ODBC driver by setting `/etc/odbc.ini`:
-
 ```ini
 [PostgreSQL Unicode]
 Description = PostgreSQL connection to database
@@ -87,19 +83,14 @@ Database = postgres_db
 Username = postgres_user
 Password = postgres_pwd
 ```
-
 We also need to configure `/etc/odbcinst.ini`:
-
 ```ini
 [PostgreSQL Unicode]
 Description = PostgreSQL ODBC driver (Unicode)
 Driver = /usr/lib/psqlodbcw.so
 ```
-
 Now your system is ready to connect.
-
 3.  Create a database to connect to:
-
 ```bash
 # Set your environment to match the settings in the container
 export PGHOST=localhost
@@ -111,9 +102,7 @@ export PGPASSWORD=postgres_pwd
 # Create a new database
 psql -c "CREATE DATABASE test WITH encoding='UTF8' LC_COLLATE='en_US.utf8' LC_CTYPE='en_US.utf8'"
 ```
-
 4. Connect with `npyodbc`:
-
 ```python
 import npyodbc
 

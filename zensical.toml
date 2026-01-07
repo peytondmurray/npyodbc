@@ -46,7 +46,7 @@ Copyright &copy; 2026 OpenTeams
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
     "index.md",
-    "gettings-started.md",
+    "getting-started.md",
     "reference.md",
 ]
 
