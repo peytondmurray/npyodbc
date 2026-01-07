@@ -88,8 +88,9 @@ ignore = [
 
 [project.optional-dependencies]
 dev = [
-    "pre-commit",
-    "meson-python"
+    "prek",
+    "meson-python",
+    "zensical",
 ]
 test = ["pytest", "hypothesis"]
 

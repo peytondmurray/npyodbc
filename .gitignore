@@ -35,3 +35,5 @@ db.sqlite
 .gdb_history
 
 .hypothesis/
+
+site/
