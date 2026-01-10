@@ -312,3 +312,5 @@ load_external_modules = true
 docstring_style = "numpy"
 inherited_members = true
 show_source = false
+allow_inspection = true
+force_inspection = true

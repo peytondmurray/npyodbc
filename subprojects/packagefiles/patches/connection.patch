@@ -1,0 +1,11 @@
+--- a/src/connection.cpp
++++ b/src/connection.cpp
+@@ -1400,7 +1400,7 @@ static PyGetSetDef Connection_getseters[] = {
+ PyTypeObject ConnectionType =
+ {
+     PyVarObject_HEAD_INIT(0, 0)
+-    "pyodbc.Connection",        // tp_name
++    "npyodbc.Connection",        // tp_name
+     sizeof(Connection),         // tp_basicsize
+     0,                          // tp_itemsize
+     Connection_dealloc,         // destructor tp_dealloc
