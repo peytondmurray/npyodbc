@@ -39,7 +39,11 @@ jobs:
           pip install 'numpy<2'
 
           # Ensure we are testing with npyodbc compiled against numpy>=2.
-          # Don't prepend the current working directory, it will inadvertently try to import
-          # the local npyodbc code which doesn't have the compiled extension
-          python -P -c 'import npyodbc; assert npyodbc.numpy_abi_version >= 0x2000000'
+          # Run this somewhere besides the current working directory, because python will
+          # inadvertently try to import the local npyodbc code which doesn't have the compiled
+          # extension otherwise. After 3.10 support is dropped, we can just use the -P flag instead
+          # but for now...
+          pushd tests/
+          python -c 'import npyodbc; assert npyodbc.numpy_abi_version >= 0x2000000'
+          popd
           pytest tests/test_numpy.py
