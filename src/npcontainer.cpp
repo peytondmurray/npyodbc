@@ -1740,6 +1740,7 @@ Cursor_fetchdictarray(PyObject *self, PyObject *args, PyObject *kwargs)
     return dictarr;
 }
 
+// Keep up to date with type stubs
 char fetchdictarray_doc[] =
         "fetchdictarray($self, /, size=-1, null_suffix=None, target_dtypes=None)\n"
         "--\n"
