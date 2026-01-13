@@ -1,0 +1,11 @@
+--- a/src/params.cpp
++++ b/src/params.cpp
+@@ -1864,7 +1864,7 @@ struct NullParam
+ PyTypeObject NullParamType =
+ {
+     PyVarObject_HEAD_INIT(NULL, 0)
+-    "pyodbc.NullParam",         // tp_name
++    "npyodbc.NullParam",         // tp_name
+     sizeof(NullParam),          // tp_basicsize
+     0,                          // tp_itemsize
+     0,                          // destructor tp_dealloc

@@ -45,7 +45,7 @@
      "connection string.  (If you must use these in your connection string, pass them\n"
      "as a string, not as keywords.)\n"
      "\n"
-@@ -1148,7 +1148,7 @@ static bool CreateExceptions()
+@@ -1149,7 +1149,7 @@ static bool CreateExceptions()
 
  static struct PyModuleDef moduledef = {
      PyModuleDef_HEAD_INIT,
@@ -54,5 +54,3 @@
      module_doc,
      -1,                         // m_size
      pyodbc_methods,             // m_methods
---
-2.45.2

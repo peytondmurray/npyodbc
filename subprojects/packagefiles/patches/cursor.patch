@@ -25,7 +25,7 @@
  {
      //  Validates that a PyObject is a Cursor (like Cursor_Check) and optionally some other requirements controlled by
      //  `flags`.  If valid and all requirements (from the flags) are met, the cursor is returned, cast to Cursor*.
-@@ -2396,6 +2389,7 @@ static PyMethodDef Cursor_methods[] =
+@@ -2394,6 +2387,7 @@ static PyMethodDef Cursor_methods[] =
      { "fetchone",         (PyCFunction)Cursor_fetchone,         METH_NOARGS,                fetchone_doc         },
      { "fetchall",         (PyCFunction)Cursor_fetchall,         METH_NOARGS,                fetchall_doc         },
      { "fetchmany",        (PyCFunction)Cursor_fetchmany,        METH_VARARGS,               fetchmany_doc        },
@@ -33,8 +33,15 @@
      { "nextset",          (PyCFunction)Cursor_nextset,          METH_NOARGS,                nextset_doc          },
      { "tables",           (PyCFunction)Cursor_tables,           METH_VARARGS|METH_KEYWORDS, tables_doc           },
      { "columns",          (PyCFunction)Cursor_columns,          METH_VARARGS|METH_KEYWORDS, columns_doc          },
-diff --git a/src/cursor.h b/src/cursor.h
-index 657eb48..d7a5050 100644
+@@ -2430,7 +2424,7 @@ static char cursor_doc[] =
+ PyTypeObject CursorType =
+ {
+     PyVarObject_HEAD_INIT(0, 0)
+-    "pyodbc.Cursor",                                        // tp_name
++    "npyodbc.Cursor",                                       // tp_name
+     sizeof(Cursor),                                         // tp_basicsize
+     0,                                                      // tp_itemsize
+     (destructor)Cursor_dealloc,                             // destructor tp_dealloc
 --- a/src/cursor.h
 +++ b/src/cursor.h
 @@ -13,6 +13,14 @@
@@ -60,4 +67,3 @@ index 657eb48..d7a5050 100644
 
  #endif
 --
-2.45.2

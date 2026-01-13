@@ -1,0 +1,11 @@
+--- a/src/row.cpp
++++ b/src/row.cpp
+@@ -453,7 +453,7 @@ static char row_doc[] =
+ PyTypeObject RowType =
+ {
+     PyVarObject_HEAD_INIT(NULL, 0)
+-    "pyodbc.Row",                                           // tp_name
++    "npyodbc.Row",                                           // tp_name
+     sizeof(Row),                                            // tp_basicsize
+     0,                                                      // tp_itemsize
+     Row_dealloc,                                            // tp_dealloc
