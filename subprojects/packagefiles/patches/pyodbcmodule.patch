@@ -9,6 +9,15 @@
 
  static ExcInfo aExcInfos[] = {
      MAKEEXCINFO(Error, PyExc_Exception,
+@@ -153,6 +153,8 @@ bool UseNativeUUID()
+     PyObject* o = PyObject_GetAttrString(pModule, "native_uuid");
+     // If this fails for some reason, we'll assume false and allow the exception to pop up later.
+     bool b = o && PyObject_IsTrue(o);
++    printf("o exists: %s", o ? "true" : "false");
++    printf("o is a python True: %s", PyObject_IsTrue(o) ? "true" : "false");
+     Py_XDECREF(o);
+     return b;
+ }
 @@ -174,7 +174,7 @@ PyObject* GetClassForThread(const char* szModule, const char* szClass)
      {
          // I don't know why there wouldn't be thread state so I'm going to raise an exception
