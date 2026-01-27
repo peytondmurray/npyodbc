@@ -27,6 +27,7 @@ jobs:
 
       - name: Install npyodbc
         run: |
+          pip install meson-python 'numpy>=1.26.2' setuptools_scm
           pip install -ve '.[test]' --no-build-isolation
 
       - name: Run Numpy tests against compilation version
