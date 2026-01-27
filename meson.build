@@ -53,7 +53,7 @@ lflags = []
 
 # Build the npyodbc module
 python.extension_module(
-  'npyodbc',
+  '_npyodbc',
   npyodbc_sources,
   dependencies : [
     python_dep,
