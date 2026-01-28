@@ -53,6 +53,8 @@ if host_machine.system() == 'windows'
   ]
 else # Unix
 
+  cflags += ['-Wno-write-strings']
+
   # First try to detect odbc via meson
   odbc = compiler.find_library('odbc', required: false)
   if odbc.found()

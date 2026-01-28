@@ -30,14 +30,16 @@ jobs:
           pip install '.[test]'
 
       - name: Run Numpy tests against compilation version
+        working-directory: tests
         run: |
-          pytest tests/test_numpy.py
+          pytest test_numpy.py
 
       - name: When compiled with numpy>=2, also run tests against numpy<2
         if: matrix.numpy-version == 'latest'
+        working-directory: tests
         run: |
           pip install 'numpy<2'
 
           # Ensure we are testing with npyodbc compiled against numpy>=2
           python -c 'import npyodbc; assert npyodbc.numpy_abi_version >= 0x2000000'
-          pytest tests/test_numpy.py
+          pytest test_numpy.py

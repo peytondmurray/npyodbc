@@ -50,7 +50,26 @@
  static struct PyModuleDef moduledef = {
      PyModuleDef_HEAD_INIT,
 -    "pyodbc",                   // m_name
-+    "npyodbc",                   // m_name
++    "_npyodbc",                   // m_name
      module_doc,
      -1,                         // m_size
      pyodbc_methods,             // m_methods
+@@ -1160,7 +1160,7 @@ static struct PyModuleDef moduledef = {
+ };
+
+
+-PyMODINIT_FUNC PyInit_pyodbc()
++PyObject* initialize_pyodbc()
+ {
+     ErrorInit();
+
+--- a/src/pyodbcmodule.h
++++ b/src/pyodbcmodule.h
+@@ -50,6 +50,7 @@ extern PyTypeObject ConnectionType;
+
+ // Thd pyodbc module.
+ extern PyObject* pModule;
++PyObject* initialize_pyodbc();
+
+ inline bool lowercase()
+ {
