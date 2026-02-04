@@ -97,6 +97,10 @@ dev = [
     "mkdocstrings-python",
 ]
 test = ["pytest", "hypothesis"]
+docs = [
+    "zensical",
+    "mkdocstrings-python",
+]
 
 [tool.setuptools_scm]
 
