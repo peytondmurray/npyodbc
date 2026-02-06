@@ -18,6 +18,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
+
+      - name: Install sqlite
+        run: |
+          sudo apt update
+          sudo apt install -y sqlite3 unixodbc-dev libsqliteodbc
+
       - run: pip install '.[docs]'
       - run: zensical build --clean
 
