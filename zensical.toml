@@ -47,6 +47,7 @@ Copyright &copy; 2026 OpenTeams
 nav = [
     "index.md",
     "getting-started.md",
+    "build-system.md",
     "reference.md",
 ]
 
