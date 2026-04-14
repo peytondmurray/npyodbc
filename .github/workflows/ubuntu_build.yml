@@ -1,5 +1,6 @@
 name: Ubuntu build
 
+permissions: {}
 on: [pull_request]
 
 jobs:
@@ -40,7 +41,7 @@ jobs:
           SA_PASSWORD: StrongPassword2022
 
       postgres:
-        image: postgres:13
+        image: postgres:13@sha256:7dad293647281f6a0f0b7b9b7adc3c27775d2adc821d8ccd9d2ff72ef503a1c8
         env:
           POSTGRES_DB: postgres_db
           POSTGRES_USER: postgres_user
@@ -130,14 +131,18 @@ jobs:
     - name: Create test databases in SQL Server
       run: |
         echo "*** SQL Server 2017"
-        docker exec -i "${{ job.services.mssql2017.id }}" /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2017' -Q "SELECT @@VERSION" || sleep 5
-        docker exec -i "${{ job.services.mssql2017.id }}" /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2017' -Q "CREATE DATABASE test"
+        docker exec -i "${JOB_SERVICES_MSSQL2017_ID}" /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2017' -Q "SELECT @@VERSION" || sleep 5
+        docker exec -i "${JOB_SERVICES_MSSQL2017_ID}" /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2017' -Q "CREATE DATABASE test"
         echo "*** SQL Server 2019"
-        docker exec -i "${{ job.services.mssql2019.id }}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2019' -C -Q "SELECT @@VERSION" || sleep 5
-        docker exec -i "${{ job.services.mssql2019.id }}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2019' -C -Q "CREATE DATABASE test"
+        docker exec -i "${JOB_SERVICES_MSSQL2019_ID}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2019' -C -Q "SELECT @@VERSION" || sleep 5
+        docker exec -i "${JOB_SERVICES_MSSQL2019_ID}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2019' -C -Q "CREATE DATABASE test"
         echo "*** SQL Server 2022"
-        docker exec -i "${{ job.services.mssql2022.id }}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2022' -C -Q "SELECT @@VERSION" || sleep 5
-        docker exec -i "${{ job.services.mssql2022.id }}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2022' -C -Q "CREATE DATABASE test"
+        docker exec -i "${JOB_SERVICES_MSSQL2022_ID}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2022' -C -Q "SELECT @@VERSION" || sleep 5
+        docker exec -i "${JOB_SERVICES_MSSQL2022_ID}" /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassword2022' -C -Q "CREATE DATABASE test"
+      env:
+        JOB_SERVICES_MSSQL2017_ID: ${{ job.services.mssql2017.id }}
+        JOB_SERVICES_MSSQL2019_ID: ${{ job.services.mssql2019.id }}
+        JOB_SERVICES_MSSQL2022_ID: ${{ job.services.mssql2022.id }}
 
     - name: Create test database in PostgreSQL
       run: |
@@ -161,10 +166,12 @@ jobs:
         echo "*** create database"
         mysql --user=root --password=root --execute "CREATE DATABASE test"
 
-    - uses: actions/checkout@v4.3.0
+    - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      with:
+        persist-credentials: false
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5.0.0
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true

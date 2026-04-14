@@ -1,8 +1,8 @@
 {
-  "name": "npyodbc-devcontainer",
   "build": {
     "dockerfile": "../Dockerfile"
   },
+  "containerUser": "mssql",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -19,26 +19,26 @@
         "xaver.clang-format"
       ],
       "settings": {
-        "edigor.formatOnSave": true,
-        "clang-format.executable": "/usr/bin/clang-format",
-        "python.defaultInterpreterPath": "/home/mssql/venv/bin/python",
-        "python.formatting.blackPath": "/home/mssql/venv/bin/black",
-        "python.formatting.provider": "black",
-        "python.terminal.activateEnvInCurrentTerminal": true,
-        "isort.path": [
-          "/home/mssql/venv/bin/isort"
-        ],
         "[python]": {
           "editor.codeActionsOnSave": {
             "source.organizeImports": "always"
           }
-        }
+        },
+        "clang-format.executable": "/usr/bin/clang-format",
+        "edigor.formatOnSave": true,
+        "isort.path": [
+          "/home/mssql/venv/bin/isort"
+        ],
+        "python.defaultInterpreterPath": "/home/mssql/venv/bin/python",
+        "python.formatting.blackPath": "/home/mssql/venv/bin/black",
+        "python.formatting.provider": "black",
+        "python.terminal.activateEnvInCurrentTerminal": true
       }
     }
   },
-  "containerUser": "mssql",
+  "name": "npyodbc-devcontainer",
+  "postCreateCommand": "pip install .",
   "remoteUser": "mssql",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/mssql/npyodbc,type=bind",
   "workspaceFolder": "/home/mssql/npyodbc",
-  "postCreateCommand": "pip install ."
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/mssql/npyodbc,type=bind"
 }
