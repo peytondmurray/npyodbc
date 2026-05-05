@@ -5,7 +5,7 @@ exclude: |
 repos:
   # Prevent commits to the main branch.
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: check-json
       - id: check-merge-conflict
@@ -18,6 +18,12 @@ repos:
       - id: name-tests-test
         args:
           - --pytest-test-first
+        exclude: |
+          (?x)^(
+            tests/mysql_test.py|
+            tests/postgresql_test.py|
+            tests/sqlserver_test.py
+          )
       - id: no-commit-to-branch
         name: ensure we are not committing to branch `main`
         args:
@@ -26,3 +32,7 @@ repos:
         args:
           - --autofix
       - id: trailing-whitespace
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: a4727cbbcd26d7098e96b9cb738169b59711ae51  # frozen: v1.24.1
+    hooks:
+      - id: zizmor
